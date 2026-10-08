@@ -1,0 +1,58 @@
+name: Publish to MCP registry
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to publish (e.g. v0.5.0)"
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    name: publish server.json to the registry
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write # the OIDC identity the registry accepts
+    defaults:
+      run:
+        shell: bash
+    # A tag a person typed reaches the shell only through the environment.
+    env:
+      TAG: ${{ inputs.tag }}
+      PUBLISHER_VERSION: v1.8.1
+      # sha256 of mcp-publisher_linux_amd64.tar.gz in that release.
+      PUBLISHER_SHA256: a06c9096dcb9727c13555b6be26c7effa707b01f06a4c561ba7a3635443cf2cc
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.tag }}
+          persist-credentials: false
+
+      - name: The tag, package.json and server.json must agree
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          [ "$TAG" = "v$version" ] || { echo "::error::tag $TAG does not match package.json $version"; exit 1; }
+          [ "$(node -p "require('./server.json').version")" = "$version" ] \
+            || { echo "::error::server.json version does not match package.json"; exit 1; }
+          [ "$(node -p "require('./server.json').packages[0].version")" = "$version" ] \
+            || { echo "::error::server.json package version does not match package.json"; exit 1; }
+          [ "$(node -p "require('./server.json').name")" = "$(node -p "require('./package.json').mcpName")" ] \
+            || { echo "::error::server.json name does not match package.json mcpName"; exit 1; }
+
+      - name: Install mcp-publisher, pinned and checksummed
+        run: |
+          curl -fsSL -o publisher.tar.gz \
+            "https://github.com/modelcontextprotocol/registry/releases/download/${PUBLISHER_VERSION}/mcp-publisher_linux_amd64.tar.gz"
+          echo "${PUBLISHER_SHA256}  publisher.tar.gz" | sha256sum -c -
+          tar xzf publisher.tar.gz mcp-publisher
+
+      - name: Log in with GitHub OIDC
+        run: ./mcp-publisher login github-oidc
+
+      - name: Publish
+        run: ./mcp-publisher publish
