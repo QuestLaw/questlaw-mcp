@@ -224,5 +224,5 @@ instead of guessing. These are the two most common errors:
 
 Both hints name the exact command for this install. Quote the hint, and never
 suggest a command of your own. In particular, never suggest an `npx` command. The
-package is not published to npm, so `npx questlaw-library-mcp` fails with a 404
+package is not published to npm, so `npx questlaw-mcp` fails with a 404
 error and sends the user in the wrong direction.

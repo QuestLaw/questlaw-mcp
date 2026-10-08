@@ -125,7 +125,7 @@ test('the package declares no runtime dependencies, and nothing dev-only ships',
 });
 
 /**
- * `npx -y questlaw-library-mcp` with no version runs whatever the registry calls
+ * `npx -y questlaw-mcp` with no version runs whatever the registry calls
  * latest, on every client start. Every install snippet names the version it was
  * written for, so a bad release reaches nobody who didn't choose it, and a version
  * bump that forgets the docs fails here.

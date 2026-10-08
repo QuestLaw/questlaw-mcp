@@ -30,5 +30,5 @@ After you install it, confirm that the four vendored modules that decrypt your
 library are intact:
 
 ```sh
-npx questlaw-library-mcp verify
+npx questlaw-mcp verify
 ```

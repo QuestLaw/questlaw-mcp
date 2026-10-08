@@ -71,7 +71,7 @@ test checks that the listed tools match the tools the server serves.
 ## Releasing
 
 1. Update the version in all four manifests.
-2. Update the pinned `questlaw-library-mcp@<version>` install commands in
+2. Update the pinned `questlaw-mcp@<version>` install commands in
    `README.md`. `test/packaging.test.js` fails until they match.
 3. Update `CHANGELOG.md`.
 4. Run `npm run check`.

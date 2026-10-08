@@ -53,7 +53,7 @@ QuestLaw extension          your machine                         AI client
 ## Quick start
 
 ```sh
-npx -y questlaw-library-mcp@0.5.0 setup
+npx -y questlaw-mcp@0.5.0 setup
 ```
 
 `setup` shows the disclosure and asks you to accept it, stores your account key in
@@ -61,7 +61,7 @@ the OS secret store, finds your newest export, test-decrypts it, and prints the
 configuration for your client. To check an install later:
 
 ```sh
-npx -y questlaw-library-mcp@0.5.0 doctor
+npx -y questlaw-mcp@0.5.0 doctor
 ```
 
 From a clone, run the same commands as `node bin/questlaw-library-mcp.js setup` and
@@ -104,7 +104,7 @@ needs that key to open an export. Get it from the extension, under **Settings,
 Encrypted library, Show account key**, and then store it:
 
 ```sh
-npx -y questlaw-library-mcp@0.5.0 setup
+npx -y questlaw-mcp@0.5.0 setup
 ```
 
 #### Where the key is kept
@@ -160,13 +160,13 @@ Either way, store your key first with `setup`.
 #### Claude Code without the plugin
 
 ```sh
-claude mcp add questlaw-library -- npx -y questlaw-library-mcp@0.5.0
+claude mcp add questlaw-library -- npx -y questlaw-mcp@0.5.0
 ```
 
 #### Codex
 
 ```sh
-codex mcp add questlaw-library -- npx -y questlaw-library-mcp@0.5.0
+codex mcp add questlaw-library -- npx -y questlaw-mcp@0.5.0
 ```
 
 Or add it to `~/.codex/config.toml` directly:
@@ -174,7 +174,7 @@ Or add it to `~/.codex/config.toml` directly:
 ```toml
 [mcp_servers.questlaw-library]
 command = "npx"
-args = ["-y", "questlaw-library-mcp@0.5.0"]
+args = ["-y", "questlaw-mcp@0.5.0"]
 
 [mcp_servers.questlaw-library.env]
 QUESTLAW_VAULT_FILE = "/absolute/path/to/export_folder"
@@ -241,7 +241,7 @@ pgrep -fl "tunnel-client|questlaw-library-mcp"
   "mcpServers": {
     "questlaw-library": {
       "command": "npx",
-      "args": ["-y", "questlaw-library-mcp@0.5.0"]
+      "args": ["-y", "questlaw-mcp@0.5.0"]
     }
   }
 }
@@ -254,7 +254,7 @@ Add an `env` block only to change a default:
   "mcpServers": {
     "questlaw-library": {
       "command": "npx",
-      "args": ["-y", "questlaw-library-mcp@0.5.0"],
+      "args": ["-y", "questlaw-mcp@0.5.0"],
       "env": {
         "QUESTLAW_VAULT_FILE": "/absolute/path/to/export_folder"
       }
@@ -281,7 +281,7 @@ The `setup` command prints the exact configuration for your machine.
 #### Checking an install
 
 ```sh
-npx -y questlaw-library-mcp@0.5.0 doctor
+npx -y questlaw-mcp@0.5.0 doctor
 ```
 
 ```

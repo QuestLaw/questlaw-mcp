@@ -2,7 +2,7 @@
  * The four QuestLaw modules this package reads through, loaded from vendor/.
  *
  * They're vendored instead of required from a checkout because a real install
- * has no checkout. Someone running `npx questlaw-library-mcp` has this package
+ * has no checkout. Someone running `npx questlaw-mcp` has this package
  * and nothing else. The QuestLaw extension is still the only owner, so these
  * copies are byte-for-byte and never edited. tools/vendor-sync.js refreshes them,
  * and `--check` fails CI when upstream moves.

@@ -27,7 +27,7 @@ Tests check each of the following properties:
 | The server cannot reach the network or write files | `test/module-graph.test.js` records every module the server loads and rejects network builtins and filesystem write calls in `src/` and `bin/` | Read the test, then `npm test` |
 | The package installs no third-party code at runtime | There are no `dependencies`, and `test/packaging.test.js` checks this. eslint is a development dependency and is not published | `npm ls --omit=dev --all` |
 | Nothing is read or served until the user consents | `src/consent.js` requires the disclosure to be accepted before the key is read from the secret store or the export is opened, and a running server stops serving on the next call after consent is revoked | `node bin/questlaw-library-mcp.js consent --revoke` |
-| The four vendored modules that decrypt a library are intact | `src/core-modules.js` checks a sha256 for each file against `vendor/PROVENANCE.json` before loading them | `npx questlaw-library-mcp verify` |
+| The four vendored modules that decrypt a library are intact | `src/core-modules.js` checks a sha256 for each file against `vendor/PROVENANCE.json` before loading them | `npx questlaw-mcp verify` |
 
 ### What the vendor digest check does and does not prove
 

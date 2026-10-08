@@ -52,7 +52,7 @@
     "key_account": {
       "type": "string",
       "title": "Secret-store account",
-      "description": "Which account in your OS secret store holds the QuestLaw account key. Run `npx questlaw-library-mcp setup` once to store it. Leave as 'default' unless you keep more than one library.",
+      "description": "Which account in your OS secret store holds the QuestLaw account key. Run `npx questlaw-mcp setup` once to store it. Leave as 'default' unless you keep more than one library.",
       "required": false,
       "default": "default"
     }
