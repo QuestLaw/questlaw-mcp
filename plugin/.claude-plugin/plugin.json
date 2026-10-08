@@ -2,7 +2,7 @@
   "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
   "name": "questlaw-library",
   "displayName": "QuestLaw Library (read-only)",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "Query and analyze your QuestLaw legal research library locally; decrypts on device from an encrypted export.",
   "author": {
     "name": "QuestLaw",

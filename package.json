@@ -1,7 +1,7 @@
 {
   "name": "questlaw-mcp",
-  "version": "0.5.0",
-  "mcpName": "io.github.questlaw/questlaw-library",
+  "version": "0.5.1",
+  "mcpName": "io.github.QuestLaw/questlaw-library",
   "description": "Read-only MCP server over a QuestLaw encrypted library export (.qlvault). Decrypts locally and makes no network connections.",
   "license": "GPL-3.0-or-later",
   "author": "QuestLaw",

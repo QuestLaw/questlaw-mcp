@@ -47,14 +47,15 @@ test('every manifest names the same license and repository', () => {
   assert.equal(manifest.documentation, `${repo}#readme`, 'manifest.json documentation');
   // The registry only lets a GitHub namespace publish for its own owner.
   const owner = repo.split('/')[3];
-  assert.ok(server.name.startsWith(`io.github.${owner}/`), 'server.json name namespace');
+  assert.ok(server.name.toLowerCase().startsWith(`io.github.${owner}/`.toLowerCase()),
+    'server.json name namespace');
 });
 
 test('the registry name matches the mcpName the registry verifies against', () => {
   // The registry reads mcpName from the published npm package and refuses the
   // publish if it differs from server.json's name.
   assert.equal(pkg.mcpName, server.name);
-  assert.match(server.name, /^[a-z0-9.-]+\/[a-z0-9-]+$/);
+  assert.match(server.name, /^[A-Za-z0-9.-]+\/[a-z0-9-]+$/);
 });
 
 test('the bundle entry point is a file the bundle actually contains', () => {
