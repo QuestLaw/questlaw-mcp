@@ -1,0 +1,29 @@
+name: Feature request
+description: Suggest something
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to do
+      description: Details?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would help
+
+  - type: checkboxes
+    id: constraints
+    attributes:
+      label: Constraints this project holds to
+      description: These are largely invariants we will not change.
+      options:
+        - label: Stays read-only. Nothing writes to a library.
+          required: true
+        - label: Stays offline. The server opens no sockets.
+          required: true
+        - label: Adds no dependency.
+          required: true

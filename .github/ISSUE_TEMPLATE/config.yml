@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: QuestLaw itself
+    url: https://questlaw.io
+    about: This connector is a community-supported companion, not part of the supported QuestLaw product.

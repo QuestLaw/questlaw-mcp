@@ -1,0 +1,71 @@
+name: Publish to npm
+
+# Publishing is deliberately manual. Tagging a release builds and attaches the
+# .mcpb bundle and the plugin zip, which is all most people install; pushing to
+# npm is a separate, explicit decision.
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to publish (e.g. v0.5.0)'
+        required: true
+      dry_run:
+        description: 'Pack and inspect without publishing'
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: npm
+    permissions:
+      contents: read
+      id-token: write # provenance attestation, and OIDC trusted publishing
+    defaults:
+      run:
+        shell: bash
+    # The tag a person typed reaches the shell only through the environment.
+    # Expanded inside `run:`, it would be pasted into the script before bash parses it.
+    env:
+      TAG: ${{ inputs.tag }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.tag }}
+          persist-credentials: false
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: The tag must match the version in package.json
+        run: |
+          version="v$(node -p "require('./package.json').version")"
+          [ "$TAG" = "$version" ] || {
+            echo "::error::tag $TAG does not match package.json $version"; exit 1; }
+
+      - name: Check
+        run: npm run check
+
+      - name: Show exactly what would ship
+        run: npm pack --dry-run
+
+      - name: Publish
+        if: ${{ !inputs.dry_run }}
+        # --provenance signs a public, verifiable link between this tag, this
+        # workflow run and the tarball. It needs a public repository and a public
+        # package; without both, npm rejects the publish.
+        #
+        # NPM_TOKEN is for the first publish only. npm lets a trusted publisher be
+        # configured on a package that already exists, so the first version needs
+        # a token. After it, configure this workflow as the package's trusted
+        # publisher on npmjs.com, delete the NPM_TOKEN secret and the env line
+        # below, and npm authenticates with this job's OIDC token (id-token: write).
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

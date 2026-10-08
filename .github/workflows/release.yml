@@ -1,0 +1,90 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to release (e.g. v0.5.0)'
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    name: build and publish a release
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write # create the release and upload the bundles
+      id-token: write # sign the provenance attestation
+      attestations: write # store the provenance attestation
+    defaults:
+      run:
+        shell: bash
+    # Values a person types, or a tag name someone pushed, reach the shell only
+    # through the environment. Expanded inside `run:`, they would be pasted into
+    # the script before bash parses it.
+    env:
+      TAG: ${{ inputs.tag || github.ref_name }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+          persist-credentials: false
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24'
+
+      - name: The tag must match the version in package.json
+        run: |
+          version="v$(node -p "require('./package.json').version")"
+          if [ "$TAG" != "$version" ]; then
+            echo "::error::tag $TAG does not match package.json $version"
+            exit 1
+          fi
+          echo "releasing $version"
+
+      # The server has no runtime dependencies, and building needs none of the
+      # development ones, so there is no install step.
+      - name: Verify vendored module digests
+        run: npm run verify
+
+      - name: Test
+        run: npm test
+
+      - name: Build the bundle and the plugin
+        run: |
+          npm run bundle
+          npm run plugin
+
+      - name: Checksum everything that ships
+        working-directory: dist
+        run: |
+          sha256sum ./*.mcpb ./*.zip | sed 's| \./| |' > SHA256SUMS
+          cat SHA256SUMS
+
+      # Signed SLSA build provenance for each download, verifiable with
+      # `gh attestation verify <file> --repo <this repository>`. SHA256SUMS ships
+      # beside the files it describes, so on its own it only catches corruption.
+      - name: Attest build provenance
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: |
+            dist/*.mcpb
+            dist/*.zip
+
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          gh release create "$TAG" \
+            --repo "$REPOSITORY" \
+            --title "$TAG" \
+            --notes-file .github/release-notes-preamble.md \
+            --generate-notes \
+            dist/*.mcpb dist/*.zip dist/SHA256SUMS
