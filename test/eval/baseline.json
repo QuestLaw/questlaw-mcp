@@ -1,0 +1,90 @@
+{
+  "overall": {
+    "queries": 68,
+    "ndcg": 0.9485,
+    "records": 0.9579,
+    "mrr": 0.9681,
+    "recall": 0.9596,
+    "snippet": 1
+  },
+  "byKind": {
+    "name": {
+      "queries": 6,
+      "ndcg": 0.9702,
+      "records": 0.9702,
+      "mrr": 0.9167,
+      "recall": 1
+    },
+    "citation": {
+      "queries": 8,
+      "ndcg": 0.9699,
+      "records": 0.9699,
+      "mrr": 1,
+      "recall": 0.9375
+    },
+    "doctrine": {
+      "queries": 16,
+      "ndcg": 0.9816,
+      "records": 0.9816,
+      "mrr": 1,
+      "recall": 0.9688
+    },
+    "typo": {
+      "queries": 3,
+      "ndcg": 0.9172,
+      "records": 0.9172,
+      "mrr": 0.8333,
+      "recall": 1
+    },
+    "word-form": {
+      "queries": 3,
+      "ndcg": 0.9166,
+      "records": 0.9166,
+      "mrr": 1,
+      "recall": 0.9167
+    },
+    "abbreviation": {
+      "queries": 7,
+      "ndcg": 0.9208,
+      "records": 0.9208,
+      "mrr": 0.8333,
+      "recall": 1
+    },
+    "proximity": {
+      "queries": 4,
+      "ndcg": 0.873,
+      "records": 0.873,
+      "mrr": 1,
+      "recall": 0.875
+    },
+    "phrase": {
+      "queries": 3,
+      "ndcg": 0.8521,
+      "records": 0.9421,
+      "mrr": 1,
+      "recall": 0.8889
+    },
+    "passage": {
+      "queries": 10,
+      "ndcg": 0.9447,
+      "records": 0.9625,
+      "mrr": 1,
+      "recall": 0.95,
+      "snippet": 1
+    },
+    "mixed": {
+      "queries": 4,
+      "ndcg": 0.943,
+      "records": 0.9906,
+      "mrr": 1,
+      "recall": 0.9583
+    },
+    "notes": {
+      "queries": 4,
+      "ndcg": 1,
+      "records": 1,
+      "mrr": 1,
+      "recall": 1
+    }
+  }
+}

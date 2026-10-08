@@ -1,0 +1,7 @@
+# fix Windows CI issues
+* text=auto eol=lf
+
+vendor/questlaw/** -text
+test/fixtures/*.qlvault -text
+test/fixtures/*.json -text
+test/fixtures/recovery.txt -text

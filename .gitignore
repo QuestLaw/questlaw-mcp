@@ -1,0 +1,10 @@
+# Never commit real library data or the key that opens it.
+*.qlvault
+*-recovery.txt
+# synthetic test vault
+!test/fixtures/library.qlvault
+
+node_modules/
+dist/
+**/.cache/
+.DS_Store

@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "questlaw-library",
+  "displayName": "QuestLaw Library (read-only)",
+  "version": "0.5.0",
+  "description": "Query and analyze your QuestLaw legal research library locally; decrypts on device from an encrypted export.",
+  "author": {
+    "name": "QuestLaw",
+    "url": "https://questlaw.io"
+  },
+  "homepage": "https://questlaw.io",
+  "repository": "https://github.com/questlaw/questlaw-mcp",
+  "license": "GPL-3.0-or-later",
+  "keywords": [
+    "legal",
+    "research",
+    "local-first",
+    "read-only",
+    "privacy"
+  ]
+}

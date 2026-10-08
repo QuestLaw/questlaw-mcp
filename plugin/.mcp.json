@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "questlaw-library": {
+      "command": "node",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/runtime/bin/questlaw-library-mcp.js"]
+    }
+  }
+}

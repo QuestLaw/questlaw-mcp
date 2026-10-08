@@ -1,0 +1,43 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.questlaw/questlaw-library",
+  "description": "Read-only access to your own QuestLaw legal research library, decrypted locally from an encrypted export. Makes no network connections.",
+  "repository": {
+    "url": "https://github.com/questlaw/questlaw-mcp",
+    "source": "github"
+  },
+  "version": "0.5.0",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "questlaw-library-mcp",
+      "version": "0.5.0",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "QUESTLAW_VAULT_FILE",
+          "description": "A .qlvault export, or a folder to take the newest one from. Defaults to ~/Downloads.",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "string"
+        },
+        {
+          "name": "QUESTLAW_DISCLOSURE_ACK",
+          "description": "Set to 'i-understand' to confirm you accept that this connector shares your decrypted library, including captured opinion text, with your AI client and its provider. Without it the server serves nothing.",
+          "isRequired": true,
+          "isSecret": false,
+          "format": "string"
+        },
+        {
+          "name": "QUESTLAW_KEY_ACCOUNT",
+          "description": "Which account in the OS secret store holds the QuestLaw account key. Defaults to 'default'. Run `questlaw-library-mcp setup` to store one.",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "string"
+        }
+      ]
+    }
+  ]
+}

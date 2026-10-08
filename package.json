@@ -1,0 +1,60 @@
+{
+  "name": "questlaw-library-mcp",
+  "version": "0.5.0",
+  "mcpName": "io.github.questlaw/questlaw-library",
+  "description": "Read-only MCP server over a QuestLaw encrypted library export (.qlvault). Decrypts locally and makes no network connections.",
+  "license": "GPL-3.0-or-later",
+  "author": "QuestLaw",
+  "homepage": "https://github.com/questlaw/questlaw-mcp#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/questlaw/questlaw-mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/questlaw/questlaw-mcp/issues"
+  },
+  "keywords": [
+    "mcp",
+    "modelcontextprotocol",
+    "legal",
+    "legal-research",
+    "local-first",
+    "read-only"
+  ],
+  "bin": {
+    "questlaw-library-mcp": "bin/questlaw-library-mcp.js"
+  },
+  "main": "src/server.js",
+  "files": [
+    "bin",
+    "cli",
+    "LICENSE",
+    "manifest.json",
+    "README.md",
+    "server.json",
+    "src",
+    "vendor"
+  ],
+  "scripts": {
+    "start": "node bin/questlaw-library-mcp.js",
+    "lint": "eslint src bin cli test tools eslint.config.js --max-warnings 0",
+    "test": "node tools/test.js",
+    "verify": "node bin/questlaw-library-mcp.js verify",
+    "vendor:sync": "node tools/vendor-sync.js",
+    "vendor:check": "node tools/vendor-sync.js --check",
+    "fixture:regen": "node tools/regen-fixture.js",
+    "bench": "node tools/bench.js",
+    "eval": "node tools/eval.js",
+    "bundle": "node tools/build-bundle.js",
+    "check": "npm run verify && npm run vendor:check && npm test",
+    "prepublishOnly": "npm run check",
+    "plugin": "node tools/build-plugin.js"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "eslint": "^10.12.0"
+  }
+}

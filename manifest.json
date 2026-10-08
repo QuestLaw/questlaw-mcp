@@ -1,0 +1,108 @@
+{
+  "manifest_version": "0.3",
+  "name": "questlaw-library",
+  "display_name": "QuestLaw Library (read-only)",
+  "version": "0.5.0",
+  "description": "Read your own QuestLaw legal research library, decrypted locally.",
+  "long_description": "Gives an AI client ranked, read-only access to your QuestLaw research: saved authorities with your notes, every saved quotation with its pincite, your projects and tags, and the full captured text of statutes, regulations, rules, and opinions.\n\nThe library is decrypted on your machine from an encrypted export you already produce. The server makes no network connections and has no code path that writes to your library.\n\nIt shares what it reads with this client, which sends it to its provider. The encrypted export carries more than QuestLaw's ordinary JSON export does. If your library holds client confidences, decide accordingly.",
+  "author": {
+    "name": "QuestLaw",
+    "url": "https://questlaw.io"
+  },
+  "homepage": "https://questlaw.io",
+  "documentation": "https://github.com/questlaw/questlaw-mcp#readme",
+  "support": "https://github.com/questlaw/questlaw-mcp/issues",
+  "license": "GPL-3.0-or-later",
+  "keywords": [
+    "legal",
+    "research",
+    "local",
+    "read-only",
+    "privacy"
+  ],
+  "server": {
+    "type": "node",
+    "entry_point": "bin/questlaw-library-mcp.js",
+    "mcp_config": {
+      "command": "node",
+      "args": [
+        "${__dirname}/bin/questlaw-library-mcp.js"
+      ],
+      "env": {
+        "QUESTLAW_VAULT_FILE": "${user_config.vault_location}",
+        "QUESTLAW_KEY_ACCOUNT": "${user_config.key_account}",
+        "QUESTLAW_DISCLOSURE_ACK": "${user_config.disclosure_ack}"
+      }
+    }
+  },
+  "user_config": {
+    "disclosure_ack": {
+      "type": "string",
+      "title": "Type i-understand to continue",
+      "description": "This connector shares your decrypted legal research library with Claude, which sends it to Anthropic. That includes your notes and the full captured text of opinions. QuestLaw's privacy commitments do not extend past this boundary. Type i-understand to confirm.",
+      "required": true
+    },
+    "vault_location": {
+      "type": "directory",
+      "title": "Where your library exports are",
+      "description": "The folder the QuestLaw extension downloads questlaw-backup-<date>.qlvault into. The newest export in it is the one that gets read.",
+      "required": true,
+      "default": "${HOME}/Downloads"
+    },
+    "key_account": {
+      "type": "string",
+      "title": "Secret-store account",
+      "description": "Which account in your OS secret store holds the QuestLaw account key. Run `npx questlaw-library-mcp setup` once to store it. Leave as 'default' unless you keep more than one library.",
+      "required": false,
+      "default": "default"
+    }
+  },
+  "compatibility": {
+    "runtimes": {
+      "node": ">=20.0.0"
+    }
+  },
+  "tools_generated": false,
+  "tools": [
+    {
+      "name": "library_overview",
+      "description": "Counts, projects, tags, courts, how much is filed under nothing, and how fresh the snapshot is."
+    },
+    {
+      "name": "search_cases",
+      "description": "Find saved authorities, ranked, with the passage that matched. Filter by project, court, or tag."
+    },
+    {
+      "name": "list_cases",
+      "description": "Every authority in the library, no query needed. Filter, sort, and page through the whole thing."
+    },
+    {
+      "name": "get_case",
+      "description": "One authority in full: summary, notes, analysis, projects, related authorities, and every quotation with its pincite."
+    },
+    {
+      "name": "search_quotes",
+      "description": "Ranked search over the text of every saved quotation."
+    },
+    {
+      "name": "search_library",
+      "description": "One ranked search across authorities, quotations, and captured source text."
+    },
+    {
+      "name": "list_project_cases",
+      "description": "Every authority filed under one project or matter."
+    },
+    {
+      "name": "get_source_text",
+      "description": "Captured text of a statute, regulation, rule, or opinion: an outline, the sections matching a query, or an excerpt."
+    },
+    {
+      "name": "find_citation_mentions",
+      "description": "Given draft text, report which saved authorities it already cites."
+    },
+    {
+      "name": "reload_snapshot",
+      "description": "Re-read the newest export from disk."
+    }
+  ]
+}

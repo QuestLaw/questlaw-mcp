@@ -1,0 +1,345 @@
+{
+  "version": 7,
+  "exportDate": "2026-10-07T21:05:54.904Z",
+  "data": {
+    "cases": [
+      {
+        "guid": "case-loper-bright",
+        "title": "Loper Bright Enterprises v. Raimondo",
+        "citation": "603 U.S. 369 (2024)",
+        "court": "U.S. Supreme Court",
+        "year": 2024,
+        "projectIds": [
+          1
+        ],
+        "tags": [
+          "administrative law",
+          "deference"
+        ],
+        "holding": "Courts decide statutory questions independently; Chevron is overruled.",
+        "whyItMatters": "Removes the deference step from every agency-authority argument.",
+        "notes": "Overrules Chevron. APA section 706 does the work. Watch the stare decisis carve-out at 412.",
+        "authorityKey": "cite:603 u.s.. 369 2024",
+        "docketNumber": "",
+        "dateAdded": 1791407154701,
+        "lastModified": 1791407154730,
+        "stance": "unreviewed",
+        "keyFacts": "",
+        "factualSimilarity": 0,
+        "notesHtml": "",
+        "elementAnalysis": {},
+        "quotes": [
+          {
+            "id": "quote-1791407154714-609120",
+            "text": "Courts must exercise their independent judgment in deciding whether an agency has acted within its statutory authority.",
+            "highlightText": "",
+            "citation": "603 U.S. 369, 412 (2024)",
+            "page": "412",
+            "citationComponents": {
+              "raw": "603 U.S. 369, 412 (2024)",
+              "volume": "603",
+              "reporter": "U.S.",
+              "page": "369",
+              "pincite": "412",
+              "court": "",
+              "year": "2024",
+              "parallels": [],
+              "database": "",
+              "isDatabase": false,
+              "documentNumber": "",
+              "starPincite": false,
+              "primary": "603 U.S. 369, 412"
+            },
+            "legalMetadata": [],
+            "addedAt": 1791407154714
+          },
+          {
+            "id": "quote-1791407154730-174543",
+            "text": "Chevron is overruled.",
+            "highlightText": "",
+            "citation": "603 U.S. 369 (2024)",
+            "page": "412",
+            "citationComponents": {
+              "raw": "603 U.S. 369 (2024)",
+              "volume": "603",
+              "reporter": "U.S.",
+              "page": "369",
+              "pincite": "",
+              "court": "",
+              "year": "2024",
+              "parallels": [],
+              "database": "",
+              "isDatabase": false,
+              "documentNumber": "",
+              "starPincite": false,
+              "primary": "603 U.S. 369"
+            },
+            "legalMetadata": [],
+            "addedAt": 1791407154730
+          }
+        ],
+        "fieldClock": {
+          "*": 1791407154701,
+          "[\"quote\",\"368z0qhvn6\"]": 1791407154715,
+          "[\"quote\",\"3qwwn0429r\"]": 1791407154730
+        }
+      },
+      {
+        "guid": "case-lujan",
+        "title": "Lujan v. Defenders of Wildlife",
+        "citation": "504 U.S. 555 (1992)",
+        "court": "U.S. Supreme Court",
+        "year": 1992,
+        "projectIds": [
+          2
+        ],
+        "tags": [
+          "standing"
+        ],
+        "keyFacts": "Environmental groups challenged a rule limiting the ESA to domestic action.",
+        "notes": "Three-part injury/causation/redressability test at 560-61.",
+        "authorityKey": "cite:504 u.s.. 555 1992",
+        "docketNumber": "",
+        "dateAdded": 1791407154744,
+        "lastModified": 1791407154756,
+        "stance": "unreviewed",
+        "holding": "",
+        "factualSimilarity": 0,
+        "whyItMatters": "",
+        "notesHtml": "",
+        "elementAnalysis": {},
+        "quotes": [
+          {
+            "id": "quote-1791407154756-123479",
+            "text": "The party invoking federal jurisdiction bears the burden of establishing these elements.",
+            "highlightText": "",
+            "citation": "504 U.S. 555 (1992)",
+            "page": "561",
+            "citationComponents": {
+              "raw": "504 U.S. 555 (1992)",
+              "volume": "504",
+              "reporter": "U.S.",
+              "page": "555",
+              "pincite": "",
+              "court": "",
+              "year": "1992",
+              "parallels": [],
+              "database": "",
+              "isDatabase": false,
+              "documentNumber": "",
+              "starPincite": false,
+              "primary": "504 U.S. 555"
+            },
+            "legalMetadata": [],
+            "addedAt": 1791407154756
+          }
+        ],
+        "fieldClock": {
+          "*": 1791407154744,
+          "[\"quote\",\"mnkealt08s\"]": 1791407154757
+        }
+      },
+      {
+        "guid": "case-verbose",
+        "title": "Verbose Holdings LLC v. Administrator",
+        "citation": "77 F.4th 100 (9th Cir. 2023)",
+        "court": "9th Cir.",
+        "year": 2023,
+        "projectIds": [
+          1
+        ],
+        "tags": [
+          "deference"
+        ],
+        "notes": "The panel splits on whether the statute is genuinely ambiguous. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. ",
+        "authorityKey": "cite:77 f.4th 100 9th cir. 2023",
+        "docketNumber": "",
+        "dateAdded": 1791407154771,
+        "lastModified": 1791407154784,
+        "stance": "unreviewed",
+        "keyFacts": "",
+        "holding": "",
+        "factualSimilarity": 0,
+        "whyItMatters": "",
+        "notesHtml": "",
+        "elementAnalysis": {},
+        "quotes": [
+          {
+            "id": "quote-1791407154784-81539",
+            "text": "Independent judgment. The panel splits on whether the statute is genuinely ambiguous. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone. Track the concurrence, which would reach the same result on the text alone.",
+            "highlightText": "",
+            "citation": "77 F.4th 100 (9th Cir. 2023)",
+            "page": "118",
+            "citationComponents": {
+              "raw": "77 F.4th 100 (9th Cir. 2023)",
+              "volume": "77",
+              "reporter": "F.4th",
+              "page": "100",
+              "pincite": "",
+              "court": "9th Cir.",
+              "year": "2023",
+              "parallels": [],
+              "database": "",
+              "isDatabase": false,
+              "documentNumber": "",
+              "starPincite": false,
+              "primary": "77 F.4th 100"
+            },
+            "legalMetadata": [],
+            "addedAt": 1791407154784
+          }
+        ],
+        "fieldClock": {
+          "*": 1791407154771,
+          "[\"quote\",\"2p7f6359jb\"]": 1791407154784
+        }
+      },
+      {
+        "guid": "case-bare",
+        "title": "Bare Record v. Nobody",
+        "authorityKey": "title:bare record v nobody",
+        "docketNumber": "",
+        "dateAdded": 1791407154803,
+        "lastModified": 1791407154803,
+        "stance": "unreviewed",
+        "keyFacts": "",
+        "holding": "",
+        "factualSimilarity": 0,
+        "whyItMatters": "",
+        "notesHtml": "",
+        "elementAnalysis": {},
+        "quotes": []
+      }
+    ],
+    "projects": [
+      {
+        "id": 1,
+        "name": "Chevron deference brief",
+        "color": "#2f6f4f",
+        "uid": "workspace-1791407154659-1",
+        "workspaceType": "general",
+        "legalTests": [],
+        "legalTest": {
+          "name": "",
+          "elements": []
+        },
+        "factPattern": "",
+        "dateCreated": 1791407154659,
+        "lastModified": 1791407154659
+      },
+      {
+        "id": 2,
+        "name": "Standing / mootness",
+        "uid": "workspace-1791407154672-2",
+        "workspaceType": "general",
+        "legalTests": [],
+        "legalTest": {
+          "name": "",
+          "elements": []
+        },
+        "factPattern": "",
+        "dateCreated": 1791407154672,
+        "lastModified": 1791407154672
+      }
+    ],
+    "relationships": [
+      {
+        "fromGuid": "case-loper-bright",
+        "toGuid": "case-lujan",
+        "type": "distinguishes",
+        "note": "Different threshold question.",
+        "edgeKey": "[\"distinguishes\",\"case-loper-bright\",\"case-lujan\"]",
+        "id": 1,
+        "supports": [
+          {
+            "key": "manual",
+            "origin": "manual",
+            "createdAt": 1791407154814,
+            "updatedAt": 1791407154814,
+            "removedAt": 0
+          }
+        ],
+        "restoredAt": 1791407154814,
+        "lastModified": 1791407154814,
+        "schemaVersion": 2,
+        "uid": "relationship-1791407154814-1",
+        "suppressedAt": 0,
+        "retypedAt": 0,
+        "dateCreated": 1791407154814
+      }
+    ],
+    "workspaceSections": [
+      {
+        "id": "sec-argument-1",
+        "name": "Argument I: no deference owed",
+        "notes": "Open with Loper Bright, then the statutory text.",
+        "schemaVersion": 1,
+        "workspaceId": "all",
+        "sortOrder": 0,
+        "updatedAt": 1791407154827,
+        "deletedAt": null
+      }
+    ],
+    "documents": [
+      {
+        "documentId": "doc-apa-706",
+        "authorityGuid": "case-loper-bright",
+        "platform": "westlaw",
+        "contentType": "statute",
+        "sourceUrl": "https://www.law.cornell.edu/uscode/text/5/706",
+        "capturedAt": "2026-10-07T21:05:54.839Z",
+        "schemaVersion": 1,
+        "sourceTitle": "5 U.S.C. 706 - Scope of review",
+        "sourceCitation": "5 U.S.C. sec. 706",
+        "publisherTitle": "",
+        "pathSegments": [],
+        "currentness": "",
+        "operativeHeading": "",
+        "provenance": {
+          "extractor": "structured-document",
+          "platform": "",
+          "source": "",
+          "capturedFrom": "",
+          "selectors": [],
+          "warnings": []
+        }
+      }
+    ],
+    "documentSections": [
+      {
+        "sectionId": "sec-4de2651d",
+        "documentId": "doc-apa-706",
+        "parentSectionId": null,
+        "order": 0,
+        "depth": 0,
+        "label": "(a)",
+        "labelKind": "alphaLower",
+        "heading": "",
+        "text": "To the extent necessary to decision and when presented, the reviewing court shall decide all relevant questions of law, interpret constitutional and statutory provisions, and determine the meaning or applicability of the terms of an agency action.",
+        "status": "active"
+      },
+      {
+        "sectionId": "sec-4ce2638a",
+        "documentId": "doc-apa-706",
+        "parentSectionId": null,
+        "order": 1,
+        "depth": 0,
+        "label": "(2)(A)",
+        "labelKind": "other",
+        "heading": "",
+        "text": "The reviewing court shall hold unlawful and set aside agency action, findings, and conclusions found to be arbitrary, capricious, an abuse of discretion, or otherwise not in accordance with law.",
+        "status": "active"
+      }
+    ],
+    "documentReferences": [
+      {
+        "referenceId": "ref-924ddde6",
+        "documentId": "doc-apa-706",
+        "sectionId": "",
+        "referenceText": "5 U.S.C. 706(2)(A)",
+        "referenceKind": "statute",
+        "targetCitationOrSection": "5 U.S.C. 706(2)(A)"
+      }
+    ]
+  }
+}
