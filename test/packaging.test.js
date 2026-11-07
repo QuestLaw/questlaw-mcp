@@ -21,6 +21,10 @@ const manifest = read('manifest.json');
 test('all three manifests carry the same version', () => {
   assert.equal(server.version, pkg.version, 'server.json version');
   assert.equal(manifest.version, pkg.version, 'manifest.json version');
+  assert.equal(read('plugin/.claude-plugin/plugin.json').version, pkg.version, 'plugin version');
+  const lock = read('package-lock.json');
+  assert.equal(lock.version, pkg.version, 'lockfile version');
+  assert.equal(lock.packages[''].version, pkg.version, 'lockfile root version');
   const npmPackage = server.packages.find(entry => entry.registryType === 'npm');
   assert.equal(npmPackage.version, pkg.version, 'server.json npm package version');
   assert.equal(npmPackage.identifier, pkg.name, 'server.json npm identifier');

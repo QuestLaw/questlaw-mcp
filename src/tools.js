@@ -10,15 +10,17 @@
 'use strict';
 
 const { Search } = require('./core-modules');
-const { buildIndex, search: runSearch, edgesByAuthority } = require('./search-index');
+const { buildIndex, search: runSearch, edgesByAuthority, JOIN_GAP } = require('./search-index');
 const { buildCitationIndex, findCitationMentions } = require('./citations');
 const { LibraryError } = require('./errors');
-const { LIMITS, capRows, clip, listResult, rowBudget } = require('./limits');
+const { LIMITS, clip, listResult, safeEnd, resultBytes,
+  fittingChars, tooLarge } = require('./limits');
+const { readCall, readText, FIELDS } = require('./text-reader');
 const {
-  caseSummary, caseDetail, quoteHit, sourceSummary, sectionView, sectionOutline,
+  caseSummary, caseDetail, quoteHit, sourceSummary, sectionOutline,
   relatedAuthority, pincite
 } = require('./projections');
-const { parseQuery, tokenize, STOPWORDS } = require('./tokenize');
+const { parseQuery } = require('./tokenize');
 
 /* ------------------------------------------------------------- arguments */
 
@@ -104,6 +106,10 @@ function indexFor(snapshot) {
   for (const list of sectionsByDocument.values()) {
     list.sort((left, right) => (left.order || 0) - (right.order || 0));
   }
+  const sectionPositions = new Map();
+  for (const sections of sectionsByDocument.values()) {
+    sections.forEach((section, position) => sectionPositions.set(section, position));
+  }
   const sourcesByAuthority = new Map();
   for (const document of documents) {
     const list = sourcesByAuthority.get(document.authorityGuid);
@@ -116,6 +122,7 @@ function indexFor(snapshot) {
     cases: new Map(cases.map(item => [String(item.guid), item])),
     documents: new Map(documents.map(item => [String(item.documentId), item])),
     sectionsByDocument,
+    sectionPositions,
     sourcesByAuthority,
     edgesByGuid,
     citations: buildCitationIndex(cases, Search.getBestCitation)
@@ -154,11 +161,9 @@ function resolveHit(snapshot, hit) {
     const quote = caseData?.quotes?.[hit.ref.quoteIndex];
     return quote ? { caseData, quote } : null;
   }
-  const sections = index.sectionsByDocument.get(hit.ref.documentId) || [];
-  const section = hit.ref.sectionId
-    ? sections.find(item => item.sectionId === hit.ref.sectionId)
-    : sections[0];
-  return section ? { document: index.documents.get(hit.ref.documentId), section } : null;
+  const section = snapshot.library.documentSections[hit.ref.sectionOrdinal];
+  return section ? { document: index.documents.get(hit.ref.documentId), section,
+    sectionIndex: index.sectionPositions.get(section) } : null;
 }
 
 function relatedFor(snapshot, guid) {
@@ -176,7 +181,8 @@ function relatedFor(snapshot, guid) {
 function capturedSourcesFor(snapshot, guid) {
   const index = indexFor(snapshot);
   return (index.sourcesByAuthority.get(guid) || []).map(document =>
-    sourceSummary(document, (index.sectionsByDocument.get(document.documentId) || []).length));
+    ({ ...sourceSummary(document, (index.sectionsByDocument.get(document.documentId) || []).length),
+      readText: readCall(snapshot, { kind: 'document', documentId: document.documentId }) }));
 }
 
 function projectKeys(project) {
@@ -301,9 +307,68 @@ function readSort(args) {
  * `matched` because the envelope's `matched` is the result count, and rows
  * shouldn't reuse that name for something else.
  */
-function matchedPassage(hit) {
+function textScope(hit, resolved) {
+  if (hit.type === 'source') {
+    return { kind: 'section', documentId: hit.ref.documentId, sectionIndex: resolved.sectionIndex };
+  }
+  if (hit.type === 'quote') {
+    return { kind: 'quote', guid: hit.ref.guid, quoteIndex: hit.ref.quoteIndex };
+  }
+  return { kind: 'case', guid: String(hit.ref) };
+}
+
+/** Locate original items inside the search index's joined display fields. */
+function compositeReads(snapshot, hit, authority) {
+  const snippet = hit.snippet;
+  const field = snippet.field;
+  const edges = indexFor(snapshot).edgesByGuid.get(String(hit.ref)) || [];
+  const values = field === 'quotes' ? (authority.quotes || []).map(quote => String(quote.text || ''))
+    : edges.map(edge => {
+      const other = String(edge.fromGuid) === String(hit.ref) ? edge.toGuid : edge.fromGuid;
+      const title = indexFor(snapshot).cases.get(String(other))?.title || '';
+      return [String(edge.type || '').replace(/[_-]+/g, ' '), title, edge.note].filter(Boolean).join(' ');
+    });
+  const reads = [];
+  let position = 0;
+  values.forEach((value, ordinal) => {
+    if (snippet.start < position + value.length && snippet.end > position) {
+      const scope = field === 'quotes'
+        ? { kind: 'quote', guid: String(hit.ref), quoteIndex: ordinal }
+        : { kind: 'relationship', guid: String(hit.ref), relationshipIndex: ordinal };
+      const original = field === 'quotes' ? value : String(edges[ordinal].note || '');
+      const prefix = value.length - original.length;
+      const start = safeEnd(original, Math.max(0, snippet.start - position - prefix - 1000));
+      reads.push(readCall(snapshot, scope, 0, start));
+    }
+    position += value.length + JOIN_GAP.length;
+  });
+  return reads;
+}
+
+function originalPassage(hit, resolved) {
+  if (hit.type === 'source') return resolved.section.text;
+  if (hit.type === 'quote') return resolved.quote.text;
+  return resolved[hit.snippet.field];
+}
+
+function matchedPassage(hit, snapshot, resolved = resolveHit(snapshot, hit)) {
   if (!hit.snippet?.text) return {};
-  return { matchedPassage: { field: hit.snippet.field, text: hit.snippet.text } };
+  const snippet = hit.snippet;
+  let scope = textScope(hit, resolved);
+  if (hit.type === 'case' && FIELDS.includes(snippet.field)) {
+    scope = { kind: 'field', guid: String(hit.ref), field: snippet.field };
+  }
+  const composite = hit.type === 'case' && ['quotes', 'related'].includes(snippet.field);
+  const original = originalPassage(hit, resolved);
+  const direct = hit.type === 'source' || hit.type === 'quote'
+    ? snippet.field === 'text' : FIELDS.includes(snippet.field);
+  let start = 0;
+  if (direct) start = safeEnd(String(original || ''), Math.max(0, snippet.start - 1000));
+  const calls = composite ? compositeReads(snapshot, hit, resolved) : [readCall(snapshot, scope, 0, start)];
+  return { matchedPassage: { field: snippet.field, text: snippet.text,
+    ...(!composite && direct ? { start: snippet.start, end: snippet.end } : {}),
+    ...(calls.length === 1 ? { readMatch: calls[0] } : { readMatches: calls }),
+    readText: readCall(snapshot, scope) } };
 }
 
 /** The other hits from the same authority or document, one line each, so they don't take a row apiece. */
@@ -314,7 +379,9 @@ function groupedMatches(hit, snapshot) {
     if (!resolved) return null;
     if (member.type === 'quote') {
       return { kind: 'quote', pincite: pincite(resolved.quote),
-        text: clip(resolved.quote.text, GROUPED_TEXT_CHARS) };
+        text: clip(resolved.quote.text, GROUPED_TEXT_CHARS),
+        ...matchedPassage(member, snapshot, resolved),
+        readText: readCall(snapshot, textScope(member, resolved)) };
     }
     if (member.type === 'case') {
       return { kind: 'case', guid: resolved.guid, title: resolved.title || '' };
@@ -323,6 +390,9 @@ function groupedMatches(hit, snapshot) {
       kind: 'source',
       label: resolved.section.label || '',
       heading: resolved.section.heading || '',
+      sectionIndex: resolved.sectionIndex,
+      ...matchedPassage(member, snapshot, resolved),
+      readText: readCall(snapshot, textScope(member, resolved)),
       ...(member.snippet?.text ? { text: clip(member.snippet.text, GROUPED_TEXT_CHARS) } : {})
     };
   }).filter(Boolean);
@@ -339,15 +409,16 @@ const GROUPED_TEXT_CHARS = 240;
  * One row of a mixed-type result. Only a source hit needs a second call to read
  * its full text, so the row spells that call out.
  */
-function mixedSearchRow(hit, resolved) {
+function mixedSearchRow(hit, resolved, snapshot) {
   const common = hit.relevance === null
     ? { kind: hit.type }
     : { kind: hit.type, relevance: hit.relevance };
   if (hit.type === 'case') {
-    return { ...common, ...caseSummary(resolved), ...matchedPassage(hit) };
+    return { ...common, ...caseSummary(resolved), ...matchedPassage(hit, snapshot, resolved) };
   }
   if (hit.type === 'quote') {
-    return { ...common, ...quoteHit(resolved.caseData, resolved.quote) };
+    return { ...common, ...quoteHit(resolved.caseData, resolved.quote),
+      ...matchedPassage(hit, snapshot, resolved), readText: readCall(snapshot, textScope(hit, resolved)) };
   }
   return {
     ...common,
@@ -356,7 +427,9 @@ function mixedSearchRow(hit, resolved) {
     citation: resolved.document?.sourceCitation || '',
     contentType: resolved.document?.contentType || '',
     label: resolved.section.label || '',
-    ...matchedPassage(hit),
+    sectionIndex: resolved.sectionIndex,
+    ...matchedPassage(hit, snapshot, resolved),
+    readText: readCall(snapshot, textScope(hit, resolved)),
     readWith: `get_source_text(documentId: "${resolved.section.documentId}")`
   };
 }
@@ -496,6 +569,10 @@ function overviewGuidance({ total, unfiled, tagged, withSource, connected }) {
   }
   guidance.push('Search is lexical, not semantic: use the words the user would have written. '
     + 'Quote a phrase to require it verbatim. Court names are a filter argument, not search text.');
+  guidance.push('Results are bounded previews. Copy readText, readMatch, or readMore calls into '
+    + 'read_library_text and follow nextCall when more text is needed. A missing nextOffset only '
+    + 'ends row pagination, not clipped text. Stored text never requires a manual download; '
+    + 'missing captured text is different. stale_cursor means repeat the original discovery call.');
   if (withSource) {
     guidance.push(`${withSource} ${withSource === 1 ? 'authority has' : 'authorities have'} `
       + 'captured source text. search_library with '
@@ -523,119 +600,128 @@ function readSectionLimit(args) {
   return readLimit(args);
 }
 
-/**
- * The sections of one document that match a query, best first. This is a plain
- * scan instead of an index lookup because it only covers one document, and
- * ranking by distinct query terms per section is cheaper and more predictable
- * than BM25 for about 20 rows.
- */
-function sectionsMatching(numbered, query) {
-  const { terms, phrases } = parseQuery(query);
-  const wanted = new Set([...terms, ...phrases.flat()].filter(term => !STOPWORDS.has(term)));
-  if (!wanted.size) return numbered;
-
-  return numbered
-    .map(entry => {
-      const found = new Set();
-      let hits = 0;
-      for (const term of tokenize(entry.section.text || '').terms) {
-        if (!wanted.has(term)) continue;
-        found.add(term);
-        hits += 1;
-      }
-      return { ...entry, distinct: found.size, hits };
-    })
-    .filter(entry => entry.distinct > 0)
-    .sort((left, right) => right.distinct - left.distinct
-      || right.hits - left.hits
-      || left.position - right.position);
+function sourceSelection(snapshot, sections, documentId, offset, query, limit, filtering) {
+  const search = filtering ? runSearch(searchIndexFor(snapshot), query, {
+    types: ['source'], filter: item => item.ref.documentId === documentId, offset, limit
+  }) : null;
+  const page = search ? search.hits.map(hit => {
+    const resolved = resolveHit(snapshot, hit);
+    return { section: resolved.section, position: resolved.sectionIndex, hit };
+  }) : sections.slice(offset, offset + limit).map((section, i) => ({ section, position: offset + i }));
+  return { page, total: search ? search.total : sections.length, search };
 }
 
-const textLength = sections => sections.reduce((total, row) => total + row.text.length, 0);
-
-/** Tells the caller a cheaper way to read when the answer is empty or very long, so nobody reads a whole opinion unaware excerpts exist. */
-function sourceNote({ query, maxChars, matches, kept }) {
-  if (query && !matches) {
-    return `Nothing in this document matches ${JSON.stringify(clip(query, 40))}. `
-      + 'Call with outline: true to see what its sections are, or drop query to read it.';
-  }
-  if (!query && !maxChars && textLength(kept) > LIMITS.longDocumentChars) {
-    return 'This is a long document. outline: true lists its sections, query returns only the '
-      + 'matching ones, and maxChars returns an excerpt.';
-  }
-  return '';
-}
-
-/** Fills the page under two limits at once, the caller's character budget and the response byte budget. */
-function takeSections(page, maxChars, byteBudget) {
+function takeSourcePage(snapshot, documentId, page, maxChars, outline, build) {
   const kept = [];
   let remaining = maxChars || Infinity;
-  let bytes = 2;
-
   for (const entry of page) {
     if (remaining <= 0) break;
-    const view = {
-      index: entry.position,
-      ...sectionView(entry.section, Math.min(LIMITS.sectionChars, remaining))
+    const scope = { kind: 'section', documentId, sectionIndex: entry.position };
+    const base = { index: entry.position, ...sectionOutline(entry.section, entry.position),
+      readText: readCall(snapshot, scope),
+      ...(entry.hit ? matchedPassage(entry.hit, snapshot) : {}) };
+    if (outline) {
+      if (resultBytes(build([...kept, base])) > LIMITS.responseBytes) {
+        if (!kept.length) throw tooLarge();
+        break;
+      }
+      kept.push(base);
+      continue;
+    }
+    const text = String(entry.section.text || '');
+    const maximum = Math.min(text.length, LIMITS.sectionChars, remaining);
+    const view = count => {
+      const end = safeEnd(text, count);
+      return { ...base, text: clip(text, end), textTruncated: end < text.length,
+        ...(end < text.length ? { readMore: readCall(snapshot, scope, 0, end) } : {}) };
     };
-    const size = Buffer.byteLength(JSON.stringify(view)) + 1;
-    if (kept.length && bytes + size > byteBudget) break;
-    kept.push(view);
-    bytes += size;
-    remaining -= view.text.length;
+    const count = fittingChars(maximum, count => build([...kept, view(count)]));
+    if (resultBytes(build([...kept, view(count)])) > LIMITS.responseBytes) {
+      if (!kept.length) throw tooLarge();
+      break;
+    }
+    kept.push(view(count));
+    remaining -= safeEnd(text, count);
   }
   return kept;
 }
 
-/**
- * One captured document as an outline, the sections matching a query, or the
- * text itself. All three page the same way and carry each section's index, so a
- * caller can go from an outline entry straight to reading that section.
- */
-function sourceTextResult({
-  sections, document, documentId, offset, query, maxChars, limit, outline
-}) {
-  const header = {
-    documentId,
-    title: document.sourceTitle || '',
-    citation: document.sourceCitation || '',
-    contentType: document.contentType || '',
-    url: document.sourceUrl || '',
-    authorityGuid: document.authorityGuid || ''
-  };
-  // Numbered before filtering, so an index always means the section's place in the document.
-  const numbered = sections.map((section, position) => ({ section, position }));
+/** Legacy section pages keep their offsets; exact text reads use separate cursors. */
+function sourceTextResult({ snapshot, sections, document, documentId, offset, query, maxChars, limit, outline }) {
   const filtering = Boolean(query) && !outline;
-  const selected = filtering ? sectionsMatching(numbered, query) : numbered;
-  const page = selected.slice(offset, offset + limit);
-
+  const { page, total, search } = sourceSelection(snapshot, sections, documentId, offset, query, limit, filtering);
   const envelope = {
-    document: header,
+    document: { documentId, title: document.sourceTitle || '', citation: document.sourceCitation || '',
+      contentType: document.contentType || '', url: document.sourceUrl || '', authorityGuid: document.authorityGuid || '' },
     sectionsTotal: sections.length,
     ...(outline ? { outline: true } : {}),
-    ...(filtering ? { query, matchedSections: selected.length } : {}),
-    offset,
-    returned: page.length,
-    sections: []
+    ...(filtering ? { query, matchedSections: total, ...searchDiagnostics(query, search),
+      ...(total ? {} : { note: 'Nothing in this document matched. Use outline: true to inspect its sections, or follow readText to read the captured text.' }) } : {}),
+    offset, readText: readCall(snapshot, { kind: 'document', documentId })
   };
-  const budget = rowBudget(envelope);
-  const kept = outline
-    ? capRows(page.map(entry => sectionOutline(entry.section, entry.position)), budget)
-    : takeSections(page, maxChars, budget);
-  const result = { ...envelope, returned: kept.length, sections: kept };
+  const build = sections => ({ ...envelope, returned: sections.length,
+    ...(offset + sections.length < total ? {
+      nextOffset: offset + sections.length,
+      truncated: `More sections remain. Call again with offset ${offset + sections.length}. Use readMore for clipped text within a section.`
+    } : {}),
+    ...(outline ? { note: 'Structure only. Follow a section readText to read its exact text.' } : {}),
+    sections
+  });
+  const kept = takeSourcePage(snapshot, documentId, page, maxChars, outline, build);
+  const result = build(kept);
+  if (resultBytes(result) > LIMITS.responseBytes) throw tooLarge();
+  return result;
+}
 
-  // A capped document always names the offset that continues it.
-  if (offset + kept.length < selected.length) {
-    result.nextOffset = offset + kept.length;
-    result.truncated = `Sections ${offset}-${offset + kept.length - 1} of `
-      + `${selected.length}${filtering ? ' matching' : ''}. Call again with offset `
-      + `${result.nextOffset} for the rest.`;
-  }
-  const note = outline
-    ? 'Structure only. Read one section with offset: <its index>, limit: 1; read the whole '
-      + 'document by leaving outline off.'
-    : sourceNote({ query, maxChars, matches: selected.length, kept });
-  if (note) result.note = note;
+/** Fit previews without losing the independent path to every stored text item. */
+function casePreview(snapshot, authority, sources, related, projects) {
+  const guid = String(authority.guid);
+  const quotes = authority.quotes || [];
+  const base = caseDetail(authority, sources);
+  const edges = indexFor(snapshot).edgesByGuid.get(guid) || [];
+  let quoteCount = Math.min(quotes.length, LIMITS.detailQuotes);
+  let relatedCount = Math.min(related.length, LIMITS.maxRows);
+  const build = chars => {
+    const detail = { ...base };
+    detail.readText = readCall(snapshot, { kind: 'case', guid });
+    detail.textTruncation = {};
+    for (const field of FIELDS) {
+      if (!(field in detail)) continue;
+      const original = String(authority[field] || '');
+      const end = safeEnd(original, Math.min(original.length, chars));
+      detail[field] = clip(original, end);
+      if (end < original.length) {
+        detail.textTruncation[field] = { chars: original.length,
+          readMore: readCall(snapshot, { kind: 'field', guid, field }, 0, end) };
+      }
+    }
+    if (!Object.keys(detail.textTruncation).length) delete detail.textTruncation;
+    detail.quotes = quotes.slice(0, quoteCount).map((quote, quoteIndex) => {
+      const original = String(quote.text || '');
+      const end = safeEnd(original, Math.min(original.length, chars, LIMITS.quoteChars));
+      return { text: clip(original, end), pincite: pincite(quote), citation: quote.citation || '',
+        quoteIndex, textTruncated: end < original.length,
+        ...(end < original.length ? { readMore: readCall(snapshot, { kind: 'quote', guid, quoteIndex }, 0, end) } : {}) };
+    });
+    if (quoteCount < quotes.length) detail.quotesOmitted = quotes.length - quoteCount;
+    if (relatedCount) {
+      detail.related = related.slice(0, relatedCount).map((row, relationshipIndex) => {
+        const original = String(edges[relationshipIndex].note || '');
+        const end = safeEnd(original, Math.min(original.length, chars));
+        return { ...row, ...(original ? { note: clip(original, end) } : {}),
+          ...(end < original.length ? { noteTruncated: true,
+            readMore: readCall(snapshot, { kind: 'relationship', guid, relationshipIndex }, 0, end) } : {}) };
+      });
+    }
+    if (relatedCount < related.length) detail.relatedOmitted = related.length - relatedCount;
+    if (projects.length) detail.projects = projects;
+    return detail;
+  };
+  while (quoteCount && resultBytes(build(LIMITS.notesChars)) > LIMITS.responseBytes) quoteCount -= 1;
+  while (relatedCount && resultBytes(build(LIMITS.notesChars)) > LIMITS.responseBytes) relatedCount -= 1;
+  const chars = fittingChars(LIMITS.notesChars, build);
+  const result = build(chars);
+  if (resultBytes(result) > LIMITS.responseBytes) throw tooLarge();
   return result;
 }
 
@@ -643,6 +729,27 @@ function sourceTextResult({
 
 function createTools(store) {
   return [
+    {
+      name: 'read_library_text',
+      title: 'Read exact research text',
+      description: 'Read exact stored source text, notes, analysis, quotations, or relationship notes in small pages. '
+        + 'Copy cursor from a readText/readMatch/readMore/nextCall object returned by another tool. '
+        + 'Follow nextCall when more text is needed; hasMore refers only to this selected target. '
+        + 'Ranges are UTF-16 code units, end exclusive. A page or search excerpt is not a complete document. '
+        + 'No manual download is needed to continue stored text. stale_cursor means repeat the original discovery call.',
+      inputSchema: {
+        type: 'object', additionalProperties: false, required: ['cursor'],
+        properties: {
+          cursor: { type: 'string', maxLength: 4096, description: 'Opaque cursor supplied by the server. Copy unchanged.' },
+          maxChars: { type: 'integer', minimum: 2, maximum: LIMITS.maxTextPageChars,
+            description: `Text code units per page, default ${LIMITS.textPageChars}; the byte budget may return less.` }
+        }
+      },
+      async run(args, context = {}) {
+        const snapshot = await store.ready(context);
+        return readText(snapshot, indexFor(snapshot), args);
+      }
+    },
     {
       name: 'library_overview',
       title: 'What is in this library',
@@ -824,7 +931,7 @@ function createTools(store) {
           return {
             ...caseSummary(cases.get(String(hit.ref))),
             relevance: hit.relevance,
-            ...matchedPassage(hit)
+            ...matchedPassage(hit, snapshot)
           };
         });
         return listResult(rows, result.total, {
@@ -839,11 +946,12 @@ function createTools(store) {
     {
       name: 'get_case',
       title: 'Read one authority',
-      description: 'One authority in full: the user\'s notes and analysis, every saved quotation '
+      description: 'One authority with bounded previews of the user\'s notes and analysis, saved quotations '
         + 'with its pincite, the projects it is filed under, how they connected it to other '
         + 'authorities (related), and any captured source text available for it. Search and list '
         + 'rows already carry a summary, so reach for this when you need the whole note, the '
-        + 'quotations, or those connections -- not to identify a case.',
+        + 'quotations, or those connections -- not to identify a case. Follow readText to read all stored research, '
+        + 'or readMore for clipped fields. Preview limits never require a manual download.',
       inputSchema: {
         type: 'object',
         additionalProperties: false,
@@ -858,16 +966,13 @@ function createTools(store) {
           throw new LibraryError('case_not_found', `No authority in this library has guid ${guid}.`,
             { hint: 'Use search_cases or list_cases and pass the guid from a result verbatim.' });
         }
-        const detail = caseDetail(found, capturedSourcesFor(snapshot, guid));
         const related = relatedFor(snapshot, guid);
-        if (related.length) detail.related = related;
         // Project ids mean nothing to a user, so add the names.
         const keys = new Set(caseProjectKeys(found));
         const projects = snapshot.library.projects
           .filter(project => projectKeys(project).some(key => keys.has(key)))
           .map(project => ({ id: project.id, name: project.name || '' }));
-        if (projects.length) detail.projects = projects;
-        return detail;
+        return casePreview(snapshot, found, capturedSourcesFor(snapshot, guid), related, projects);
       }
     },
 
@@ -902,9 +1007,10 @@ function createTools(store) {
         for (const hit of result.hits) {
           const resolved = resolveHit(snapshot, hit);
           if (!resolved) continue;
-          rows.push(hit.relevance === null
-            ? quoteHit(resolved.caseData, resolved.quote)
-            : { ...quoteHit(resolved.caseData, resolved.quote), relevance: hit.relevance });
+          rows.push({ ...quoteHit(resolved.caseData, resolved.quote),
+            ...(hit.relevance === null ? {} : { relevance: hit.relevance }),
+            ...matchedPassage(hit, snapshot, resolved),
+            readText: readCall(snapshot, textScope(hit, resolved)) });
         }
         return listResult(rows, result.total, {
           ...(query ? { query } : {}),
@@ -956,7 +1062,7 @@ function createTools(store) {
           .map(hit => {
             const resolved = resolveHit(snapshot, hit);
             return resolved
-              ? { ...mixedSearchRow(hit, resolved), ...groupedMatches(hit, snapshot) }
+              ? { ...mixedSearchRow(hit, resolved, snapshot), ...groupedMatches(hit, snapshot) }
               : null;
           })
           .filter(Boolean);
@@ -1016,8 +1122,10 @@ function createTools(store) {
         + 'ids come from get_case (capturedSources) or a search_library source hit. It does not '
         + 'have to arrive whole: outline lists the sections and their sizes, query returns only '
         + 'the sections matching it, maxChars caps how much text comes back, and offset pages '
-        + 'through the rest. Reach for one of those first on an opinion -- a full one runs to '
-        + 'tens of thousands of characters.',
+        + 'through sections. Follow readText for exact complete text or each section\'s readMore '
+        + 'for its clipped tail; nextOffset alone does not cover clipped text. Query uses the same '
+        + 'phrase, shorthand, and word-form rules as search_library. Use matchedPassage.readMatch '
+        + 'to read around a late match. Stored text does not require a manual download.',
       inputSchema: {
         type: 'object',
         additionalProperties: false,
@@ -1059,6 +1167,7 @@ function createTools(store) {
               + 'search_library with types: ["source"] and use the documentId on a hit.' });
         }
         return sourceTextResult({
+          snapshot,
           sections: index.sectionsByDocument.get(documentId) || [],
           document,
           documentId,

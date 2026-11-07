@@ -70,13 +70,7 @@ test checks that the listed tools match the tools the server serves.
 
 ## Releasing
 
-1. Update the version in all four manifests.
-2. Update the pinned `questlaw-mcp@<version>` install commands in
-   `README.md`. `test/packaging.test.js` fails until they match.
-3. Update `CHANGELOG.md`.
-4. Run `npm run check`.
-5. Tag and push: `git tag v0.5.1 && git push origin v0.5.1`
-
-The tag starts `.github/workflows/release.yml`, which rebuilds the bundle and the
-plugin, writes `SHA256SUMS`, attests each file's build provenance, and creates the
-GitHub release. Publishing to npm is a separate workflow that you run by hand.
+Follow [RELEASING.md](RELEASING.md) for checks, build/package inspection, GitHub
+release creation, npm dry-run and publication, and MCP registry publication.
+Update all manifests, lockfile versions, README install pins, changelog, and
+release notes together. Tagging builds GitHub assets; it does not publish npm.

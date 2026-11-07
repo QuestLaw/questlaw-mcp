@@ -42,6 +42,27 @@ test('a directory resolves to its newest export', () => {
   assert.equal(findVaultFile(fixture.file), fixture.file);
 });
 
+test('text cursors survive failed reloads but reject an automatically replaced snapshot', async t => {
+  const dir = scratchDir();
+  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  const stamp = Date.now() - 10000;
+  place(dir, 'first.qlvault', stamp);
+  const store = createSnapshotStore({ target: dir, recoveryCode: fixture.recoveryCode, freshnessIntervalMs: 0 });
+  await store.load();
+  const tools = new Map(createTools(store).map(tool => [tool.name, tool]));
+  const link = (await tools.get('get_case').run({ guid: 'case-verbose' })).readText;
+  const read = () => tools.get(link.tool).run(link.arguments);
+  const before = await read();
+  assert.deepEqual(await Promise.all([read(), read()]), [before, before]);
+  place(dir, 'damaged.qlvault', stamp + 1000, 'invalid export');
+  assert.deepEqual(await read(), before, 'failed reload keeps the same readable snapshot');
+  place(dir, 'newest.qlvault', stamp + 2000);
+  await assert.rejects(read(), { code: 'stale_cursor' });
+  const fresh = (await tools.get('get_case').run({ guid: 'case-verbose' })).readText;
+  const after = await tools.get(fresh.tool).run(fresh.arguments);
+  assert.notEqual(before.snapshotId, after.snapshotId);
+});
+
 /**
  * A download folder is shared with a browser that renames and deletes files as it
  * goes. A directory that happens to end in .qlvault, or a file that vanished

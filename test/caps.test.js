@@ -17,7 +17,7 @@ const assert = require('node:assert/strict');
 const path = require('path');
 const { execFileSync } = require('child_process');
 
-const { LIMITS, capRows, listResult, clip } = require('../src/limits');
+const { LIMITS, capRows, listResult, clip, resultBytes } = require('../src/limits');
 const { createTools } = require('../src/tools');
 
 const PARAGRAPH = 'The statute forecloses the agency reading, and the legislative history '
@@ -82,14 +82,13 @@ test('an out-of-range budget is clamped, not obeyed', () => {
   assert.equal(budgetWith('32768'), 32 * 1024, 'in range');
 });
 
-test('capRows stops at the budget and never returns nothing', () => {
+test('capRows stops at the budget and refuses an oversized first row', () => {
   const rows = Array.from({ length: 100 }, (_, index) => ({ index, text: PARAGRAPH }));
   const kept = capRows(rows, 4096);
   assert.ok(kept.length > 0 && kept.length < rows.length);
   assert.ok(bytes(kept) <= 4096);
-  // One row larger than the whole budget still comes back. Fields are clipped
-  // upstream so a single row is bounded, and returning nothing would be worse.
-  assert.equal(capRows([{ text: 'x'.repeat(9000) }], 1024).length, 1);
+  assert.throws(() => capRows([{ text: 'x'.repeat(9000) }], 1024),
+    { code: 'response_too_large' });
 });
 
 test('a truncated list says which limit bound it', () => {
@@ -107,6 +106,7 @@ test('search_cases stays inside the budget on a library that would blow it', asy
   assert.equal(result.matched, 200);
   assert.ok(result.returned < LIMITS.maxRows, 'the byte budget must bind before the row cap');
   assert.ok(bytes(result) <= LIMITS.responseBytes, `response was ${bytes(result)} bytes`);
+  assert.ok(resultBytes(result) <= LIMITS.responseBytes);
   assert.match(result.truncated, /byte budget/);
 });
 
@@ -128,6 +128,7 @@ test('get_source_text pages a long document instead of dropping the tail', async
   assert.equal(first.nextOffset, first.returned);
   assert.match(first.truncated, /offset \d+/);
   assert.ok(bytes(first) <= LIMITS.responseBytes);
+  assert.ok(resultBytes(first) <= LIMITS.responseBytes);
 
   // Following nextOffset must advance, or paging is a dead end.
   const second = await sourceText.run({ documentId: 'doc-long', offset: first.nextOffset });
@@ -141,4 +142,29 @@ test('clip marks what it removed rather than silently shortening', () => {
   assert.match(clipped, /\[clipped, 400 more characters\]/);
   assert.equal(clip('short', 100), 'short');
   assert.equal(clip(null, 10), '');
+});
+
+test('escaped source, note, and quotation text fits actual MCP bytes and remains fully readable', async () => {
+  const library = syntheticLibrary({ cases: 1, sections: 1 });
+  const text = '\u0001\\"😀\r\n'.repeat(2000);
+  library.documentSections[0].text = text;
+  library.cases[0].notes = text;
+  library.cases[0].quotes[0].text = text;
+  const tools = toolsOver(library);
+  for (const [name, args] of [
+    ['get_source_text', { documentId: 'doc-long' }], ['get_case', { guid: 'case-0' }],
+    ['search_quotes', {}], ['search_library', {}]
+  ]) {
+    const result = await tools.get(name).run(args);
+    assert.ok(resultBytes(result) <= LIMITS.responseBytes, name);
+  }
+  let next = (await tools.get('get_source_text').run({ documentId: 'doc-long' })).readText;
+  let restored = '';
+  while (next) {
+    const result = await tools.get(next.tool).run(next.arguments);
+    assert.ok(resultBytes(result) <= LIMITS.responseBytes);
+    restored += result.parts.map(part => part.text).join('');
+    next = result.nextCall;
+  }
+  assert.equal(restored, text);
 });

@@ -40,9 +40,9 @@ test.before(async () => {
   tools = new Map(createTools(store).map(tool => [tool.name, tool]));
 });
 
-test('the tool surface is the ten documented tools', async () => {
+test('the tool surface is the eleven documented tools', async () => {
   assert.deepEqual([...tools.keys()], [
-    'library_overview', 'list_cases', 'search_cases', 'get_case', 'search_quotes',
+    'read_library_text', 'library_overview', 'list_cases', 'search_cases', 'get_case', 'search_quotes',
     'search_library', 'list_project_cases', 'get_source_text', 'find_citation_mentions',
     'reload_snapshot'
   ]);
@@ -65,7 +65,10 @@ test('paging arguments are declared as bounded integers', () => {
         `${tool.name} limit`);
     }
     if (offset) assert.deepEqual([offset.type, offset.minimum], ['integer', 0], `${tool.name} offset`);
-    if (maxChars) assert.deepEqual([maxChars.type, maxChars.minimum], ['integer', 1]);
+    if (maxChars) {
+      assert.deepEqual([maxChars.type, maxChars.minimum],
+        ['integer', tool.name === 'read_library_text' ? 2 : 1]);
+    }
   }
 });
 
@@ -401,7 +404,7 @@ test('get_source_text can return structure instead of text', async () => {
   assert.deepEqual(outline.sections.map(section => section.label), ['(a)', '(2)(A)']);
   assert.deepEqual(outline.sections.map(section => section.chars), [247, 194]);
   assert.ok(outline.sections.every(section => section.text === undefined));
-  assert.match(outline.note, /limit: 1/);
+  assert.match(outline.note, /readText/);
 });
 
 test('get_source_text returns an excerpt when asked for one', async () => {

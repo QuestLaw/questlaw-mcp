@@ -87,7 +87,7 @@ test('the client handshake works end to end', async () => {
   assert.equal(messages[0].result.serverInfo.name, 'questlaw-library');
   assert.ok(messages[0].result.capabilities.tools);
 
-  assert.equal(messages[1].result.tools.length, 10);
+  assert.equal(messages[1].result.tools.length, 11);
   assert.ok(messages[1].result.tools.every(tool => tool.name && tool.description && tool.inputSchema));
   // Nothing here writes or reaches the network, and a client that is told so can
   // stop asking the user to approve a read of their own library.
@@ -100,6 +100,49 @@ test('the client handshake works end to end', async () => {
   assert.equal(payload(messages[2]).counts.cases, 4);
   assert.deepEqual(messages[3].result, {});
   assert.match(stderr, /15 records from library\.qlvault/);
+});
+
+test('a client follows exact text calls over stdio until the stored note is complete', { timeout: 10000 }, async t => {
+  const fixture = await ensureFixture();
+  const expected = fixture.portableExport.data.cases.find(row => row.guid === 'case-verbose').notes;
+  const child = spawn(process.execPath, [BIN], { env: { ...process.env, ...env }, stdio: 'pipe' });
+  t.after(() => child.kill());
+  let buffer = '';
+  let stderr = '';
+  let restored = '';
+  let id = 1;
+  child.stderr.on('data', chunk => { stderr += chunk; });
+  const closed = new Promise((resolve, reject) => {
+    child.on('error', reject);
+    child.on('close', resolve);
+    child.stdout.setEncoding('utf8');
+    child.stdout.on('data', chunk => {
+      buffer += chunk;
+      let end;
+      while ((end = buffer.indexOf('\n')) >= 0) {
+        const line = buffer.slice(0, end);
+        buffer = buffer.slice(end + 1);
+        try {
+          const message = JSON.parse(line);
+          const result = payload(message);
+          assert.equal(message.result.isError, undefined, JSON.stringify(result.error));
+          if (id === 1) {
+            const next = result.readText;
+            child.stdin.write(JSON.stringify(callTool(++id, next.tool, { ...next.arguments, maxChars: 1000 })) + '\n');
+          } else {
+            restored += result.parts.filter(part => part.field === 'notes').map(part => part.text).join('');
+            if (result.nextCall) {
+              child.stdin.write(JSON.stringify(callTool(++id, result.nextCall.tool, result.nextCall.arguments)) + '\n');
+            } else child.stdin.end();
+          }
+        } catch (error) { child.kill(); reject(error); }
+      }
+    });
+  });
+  child.stdin.write(JSON.stringify(callTool(id, 'get_case', { guid: 'case-verbose' })) + '\n');
+  assert.equal(await closed, 0, stderr);
+  assert.ok(id > 2, 'the note really needed continuation');
+  assert.equal(restored, expected);
 });
 
 test('a progress token on the first call reports the read as it happens', async () => {
@@ -269,7 +312,7 @@ test('the handshake does not depend on the library being readable', async () => 
   // A client can connect, list tools, and be told what is wrong, instead of
   // seeing a dead server.
   assert.equal(messages[0].result.serverInfo.name, 'questlaw-library');
-  assert.equal(messages[1].result.tools.length, 10);
+  assert.equal(messages[1].result.tools.length, 11);
   assert.equal(payload(messages[2]).error.code, 'vault_file_missing');
 });
 

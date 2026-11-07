@@ -11,7 +11,7 @@
 'use strict';
 
 const { asLibraryError } = require('./errors');
-const { LIMITS } = require('./limits');
+const { LIMITS, toolResult, resultBytes, tooLarge } = require('./limits');
 
 // Tools-only servers behave the same across these. Echo the client's version if
 // we know it, otherwise answer with our newest.
@@ -87,16 +87,17 @@ function createRpcServer({ tools, serverInfo, log = () => {} }) {
       const value = await tool.run(args, { onProgress: context.onProgress });
       // Compact, because the byte budget in src/limits.js is measured compact.
       // Indenting put a full page about a fifth over the ceiling and cost tokens for nothing.
-      return { content: [{ type: 'text', text: JSON.stringify(value) }] };
+      if (resultBytes(value) > LIMITS.responseBytes) throw tooLarge();
+      return toolResult(value);
     } catch (error) {
       // A tool failure is data for the model to reason about, not a broken
       // connection, so it comes back as a result with isError.
       const structured = asLibraryError(error);
       log(`tool ${tool.name} failed: ${structured.code} ${structured.message}`);
-      return {
-        content: [{ type: 'text', text: JSON.stringify({ error: structured.toJSON() }) }],
-        isError: true
-      };
+      const value = { error: structured.toJSON() };
+      const result = toolResult(value, true);
+      return Buffer.byteLength(JSON.stringify(result)) <= LIMITS.responseBytes
+        ? result : toolResult({ error: tooLarge().toJSON() }, true);
     }
   }
 

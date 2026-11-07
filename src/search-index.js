@@ -139,7 +139,7 @@ function sourceDocument(section, document, index) {
   return {
     id: `source:${section.sectionId || `${section.documentId}:${index}`}`,
     type: 'source',
-    ref: { documentId: section.documentId, sectionId: section.sectionId || '' },
+    ref: { documentId: section.documentId, sectionId: section.sectionId || '', sectionOrdinal: index },
     order: index,
     weights: SOURCE_FIELDS,
     fields: {
@@ -201,7 +201,7 @@ function edgesByAuthority(library) {
   const edges = new Map();
   for (const edge of library.relationships || []) {
     if (Number(edge.suppressedAt) > 0 || edge.deletedAt) continue;
-    for (const end of [edge.fromGuid, edge.toGuid]) {
+    for (const end of new Set([edge.fromGuid, edge.toGuid])) {
       if (!end) continue;
       const list = edges.get(String(end));
       if (list) list.push(edge);
@@ -678,7 +678,8 @@ function leadingSnippet(document, maxChars) {
   const fallback = Object.entries(document.fields).find(([, value]) => value);
   if (!fallback) return null;
   const [field, text] = fallback;
-  return { field, text: text.length > maxChars ? `${text.slice(0, maxChars)}...` : text };
+  return { field, start: 0, end: Math.min(text.length, maxChars),
+    text: text.length > maxChars ? `${text.slice(0, maxChars)}...` : text };
 }
 
 /** Rough characters per token, for sizing a window of positions to a character budget. */
@@ -734,6 +735,8 @@ function buildSnippet(document, queryTerms, maxChars, weightOf = () => 1) {
     .replace(/\s+/g, ' ').trim();
   return {
     field: best.field,
+    start,
+    end,
     text: `${start > 0 ? '...' : ''}${slice}${end < best.text.length ? '...' : ''}`
   };
 }
@@ -978,5 +981,6 @@ function search(index, query, options = {}) {
 module.exports = {
   buildIndex, search, expandTerm, buildSnippet, documentHasPhrase, genericCourtTerms,
   edgesByAuthority,
+  JOIN_GAP,
   CASE_FIELDS, QUOTE_FIELDS, SOURCE_FIELDS, STOPWORDS, COURT_BOILERPLATE
 };

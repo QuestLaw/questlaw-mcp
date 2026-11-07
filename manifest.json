@@ -2,7 +2,7 @@
   "manifest_version": "0.3",
   "name": "questlaw-library",
   "display_name": "QuestLaw Library (read-only)",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "description": "Read your own QuestLaw legal research library, decrypted locally.",
   "long_description": "Gives an AI client ranked, read-only access to your QuestLaw research: saved authorities with your notes, every saved quotation with its pincite, your projects and tags, and the full captured text of statutes, regulations, rules, and opinions.\n\nThe library is decrypted on your machine from an encrypted export you already produce. The server makes no network connections and has no code path that writes to your library.\n\nIt shares what it reads with this client, which sends it to its provider. The encrypted export carries more than QuestLaw's ordinary JSON export does. If your library holds client confidences, decide accordingly.",
   "author": {
@@ -65,6 +65,10 @@
   "tools_generated": false,
   "tools": [
     {
+      "name": "read_library_text",
+      "description": "Exact stored research text in bounded, snapshot-bound pages. Follow the supplied readText/readMatch/readMore and nextCall objects."
+    },
+    {
       "name": "library_overview",
       "description": "Counts, projects, tags, courts, how much is filed under nothing, and how fresh the snapshot is."
     },
@@ -78,7 +82,7 @@
     },
     {
       "name": "get_case",
-      "description": "One authority in full: summary, notes, analysis, projects, related authorities, and every quotation with its pincite."
+      "description": "One authority with bounded previews of notes, analysis, and quotations. Follow readText for full research text."
     },
     {
       "name": "search_quotes",

@@ -9,7 +9,7 @@ server, and this document covers how it works inside.
 
 `questlaw-library-mcp` is a read-only MCP server. It finds one encrypted export
 file written by the QuestLaw browser extension, decrypts the whole file into
-memory, builds a search index over the result, and answers ten tool calls over
+memory, builds a search index over the result, and answers eleven tool calls over
 stdio. Nothing is written back to the library, and nothing is written to disk in
 cleartext.
 
@@ -417,18 +417,36 @@ budget than forty authorities with no notes. A 2,000-case library serializes to
 about 3.5 MiB, or roughly a million tokens, so the server can't return a whole
 library of any realistic size.
 
-The byte budget defaults to 64 KiB, and it is the only limit you can change. You
-set it with `QUESTLAW_MAX_RESPONSE_BYTES`, which is kept between 8 KiB and 1 MiB.
-Rows are limited to 50, and each field is shortened before the budget applies, so
-one field can't use up the whole budget. Every list result reports `matched`, which is the true count, alongside
-`returned`. A truncated result always says how to get the rest, and
-`get_source_text` returns a `nextOffset` rather than dropping the tail.
+The byte budget defaults to 64 KiB and is set with
+`QUESTLAW_MAX_RESPONSE_BYTES`, clamped between 8 KiB and 1 MiB. It measures the
+serialized MCP tool result, including the JSON text block's escaping, excluding
+the outer JSON-RPC frame. Row fitting and the final RPC guard use the same
+measurement. No first-row exception may exceed the budget. An unrepresentable
+result returns a bounded `response_too_large` error, never broken JSON.
 
-Every list tool takes an `offset` and returns it. When a page stops before
-`matched` is reached, because of either the caller's `limit` or the byte budget,
-the result carries `nextOffset` and a `truncated` sentence naming the call that continues it.
-`listResult()` emits `nextOffset` only for tools that passed an `offset`, so a tool
-that cannot page never advertises paging.
+List tools report `matched`, `returned`, and `nextOffset` for remaining rows.
+These fields say nothing about completeness of an individual text field. Source
+sections, quotations, and case fields retain bounded previews with explicit
+`readMore` calls where clipped. `get_case` also reports omitted quotation previews
+and a `readText` call reaching all stored research text.
+
+`read_library_text` accepts an opaque `cursor` and optional `maxChars` (default
+4,000, minimum 2, maximum 65,536 UTF-16 code units). A shared reader handles a
+whole document, section, authority's research, field, quotation, or live
+relationship note. It emits exact text parts with their original identities,
+`start`, exclusive `end`, and `totalChars`. It inserts no clipping markers and
+never introduces split surrogate pairs. `nextCall` is present exactly when
+`hasMore` is true for the selected target. A cursor can start around a search
+match, so reaching its end does not prove that preceding text was read.
+
+Cursors carry versioned identifiers and positions authenticated by an ephemeral
+process HMAC key, never research text or query strings. Each prepared snapshot
+has a random identity. Cursors are stateless and repeatable within their
+snapshot, and fail with `stale_cursor` on replacement or process restart. The
+caller reacquires a read call rather than mixing snapshots. The reader always
+passes through `store.ready()`, including its consent check. Catalogs reference
+existing strings and are cached weakly by snapshot; old snapshots are not pinned
+for continuation.
 
 Input is bounded too. `src/rpc.js` splits stdin into lines itself and drops any
 line longer than `LIMITS.maxMessageBytes` (4 MiB) as it arrives, answering it with
@@ -445,11 +463,19 @@ cuts the text to `LIMITS.summaryChars`, at the end of a sentence when possible.
 things in a brief. An empty `summary` is returned instead of left out, because
 knowing that the user wrote nothing on a record saves a `get_case` call.
 
-`get_source_text` has four ways to return less than everything: `outline: true` for
-structure with no text, `query` for only the sections that match it, `maxChars` for a
-character budget across the page, and `offset` with `limit` for ordinary paging.
-Every section carries its `index` in the document and its true `chars`, so an excerpt
-can always be turned back into a full read of one section.
+`get_source_text` retains outline, query, excerpt, and section-offset modes.
+Query mode uses the existing search engine scoped to that document with grouping
+off, including the same phrase, shorthand, and word-form rules. It returns
+original document-relative section indices regardless of ranking. Every outline
+row can start an exact section read. Every clipped text row can resume its tail
+independently of the legacy section offset.
+
+Search snippets retain ranges before display whitespace is normalized.
+`matchedPassage.readMatch` opens original text near the match; joined quotation
+and relationship passages map to constituent items through `readMatches` when
+needed. Display snippets must not be treated as lossless or complete source text.
+Source references include their original collection ordinal so missing or
+repeated section IDs cannot resolve to another section.
 
 `src/projections.js` decides what a tool may return about a record. Summaries
 identify the authority, and details show what it says. Fields such as `stance`,
@@ -581,7 +607,8 @@ bin/          entry point; routes subcommands, never writes
 src/          the server. read-only, offline, no dependencies
   server.js       wiring and startup
   rpc.js          MCP stdio transport: newline-delimited JSON-RPC 2.0
-  tools.js        the ten tools
+  tools.js        the eleven tools and their previews
+  text-reader.js  shared lossless text paging and snapshot-bound cursors
   citations.js    where a draft cites the library, for find_citation_mentions
   snapshot.js     finding, loading, and holding the decrypted library
   reader.js       the decryption chain

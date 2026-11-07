@@ -35,7 +35,8 @@ Don't try to discover what is in the library by guessing search terms, because o
 | Something specific, when you don't know where it is | `search_library` |
 | An authority to cite | `search_cases` |
 | Language to quote | `search_quotes` |
-| One authority in full | `get_case` |
+| One authority and its research previews | `get_case` |
+| Exact research text beyond any preview limit | `read_library_text` |
 | The text of a statute or opinion | `get_source_text` |
 | Everything filed under one project | `list_project_cases` |
 | Every place a draft cites a saved authority | `find_citation_mentions` |
@@ -50,8 +51,10 @@ next.
 | --- | --- |
 | `matched` | The total number of results. Compare it to `returned`, and never assume they are equal |
 | `returned` | How many results are in this response |
-| `nextOffset` | **There are more results.** Call the same tool again with this `offset`. If `nextOffset` is absent, you have seen everything |
-| `truncated` | Explains why the page stopped, and what to call next |
+| `nextOffset` | **There are more results.** Call the same tool again with this `offset`. Its absence ends row pagination only; inspect text continuation separately |
+| `truncated` | Explains why the row page stopped, and what to call next |
+| `readText`, `readMore`, `readMatch` | Exact `{ tool, arguments }` calls for stored text; copy them unchanged |
+| `hasMore` + `nextCall` | On exact text reads, continue the selected target with `nextCall` when needed |
 | `note` | Explains why the query behaved as it did, e.g., it was widened, some terms were ignored, or nothing matched. Act on it before you search again |
 | `matchedTerms` | The word stems that matched. If your word is missing, the library doesn't use it |
 | `browsing: true` | Your query had no searchable words, so the results are the library in stored order, without ranking |
@@ -103,7 +106,7 @@ anything.
 **"Which of my cases supports this point?"**
 Call `search_cases({ query: "..." })`, and judge the results from `summary` and
 `matchedPassage`. Then call `get_case` on the one or two authorities you will use,
-to get the full note and the quotations.
+to inspect the notes and quotations; follow `readText` or `readMore` if a preview is insufficient.
 
 **"Find me language to quote."**
 Call `search_quotes({ query: "..." })`. Keep the `pincite` with every quotation you
@@ -166,20 +169,36 @@ the question requires, and stop at the first step that answers it:
 1. `library_overview` returns the shape of the whole library, in about 1 KB.
 2. `list_cases` and `search_cases` rows return a title, citation, court, and summary
    for each authority.
-3. `get_case` returns the full note, every quotation, and the related authorities
-   for one case.
+3. `get_case` returns bounded previews of notes, quotations, and related authorities.
+   Its `readText` reads all stored research text, including omitted quotations;
+   `textTruncation` supplies `readMore` for clipped notes and analysis.
 4. `get_source_text({ documentId, outline: true })` returns a document's sections
    and their lengths, without text.
 5. `get_source_text({ documentId, query: "..." })` returns only the matching
    sections, ranked.
 6. `get_source_text({ documentId, maxChars: 2000 })` returns an excerpt, and each
    section reports its full length in `chars`.
-7. `get_source_text({ documentId })` returns the whole document. A full opinion is
-   tens of thousands of characters long, so ask for it only when the answer must
-   rely on the opinion's own words.
+7. Follow the document's `readText` call with `read_library_text` to read its exact
+   stored text. Follow `nextCall` while `hasMore` is true if a complete read is
+   needed. Do not infer complete review from an excerpt or selected sections.
 
-To read one section in full, call
-`get_source_text({ documentId, offset: <its index>, limit: 1 })`.
+To read one section in full, follow its `readText` call. To resume a clipped
+section or quotation, follow its `readMore`. To open around a search match,
+follow `matchedPassage.readMatch`; a composite passage can instead provide a list
+of `readMatches`, each pointing to an original item. These are different from
+`nextOffset`, which only advances between rows or sections.
+
+The exact reader returns untouched text with UTF-16 `start`, exclusive `end`, and
+`totalChars`. Its default is 4,000 code units per page; `maxChars` can be 2 through
+65,536, and the response byte budget may return less. You may lower `maxChars`
+when the host clips a tool response. Follow only as much text as the task needs.
+Never ask for a manual download merely because a preview or page is bounded.
+If captured source text is missing, say so; pagination cannot retrieve text that
+was never captured. A full stored capture need not be the full publication.
+
+Cursors are opaque and tied to a server session and library snapshot. On
+`stale_cursor`, repeat the original search or preview call and use its new read
+call. Do not combine passages from different snapshots as one continuous read.
 
 ## Do not
 
@@ -222,7 +241,8 @@ instead of guessing. These are the two most common errors:
   decision is theirs, so tell them and stop.
 - `account_key_unavailable` means there is no key in the OS secret store.
 
-Both hints name the exact command for this install. Quote the hint, and never
-suggest a command of your own. In particular, never suggest an `npx` command. The
-package is not published to npm, so `npx questlaw-mcp` fails with a 404
-error and sends the user in the wrong direction.
+Both hints name the exact command for this install. Quote the hint rather than
+guessing a different installation or command. The npm package and uploaded
+plugin can be different versions; updating one does not update the other. Never
+ask the user to reinstall solely because a text preview is clipped: follow its
+read call first.

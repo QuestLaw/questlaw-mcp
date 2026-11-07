@@ -1,3 +1,21 @@
+## 0.5.2 — complete stored text retrieval
+
+- The 8,000-character source retrieval issue is fixed.
+
+- Source queries now share search's phrase, shorthand, and word-form rules. This
+release also fixes section identification, Unicode clipping, and response budgets.
+See [the changelog](https://github.com/QuestLaw/questlaw-mcp/blob/v0.5.2/CHANGELOG.md).
+
+## Updating
+
+- **npm / npx:** change your MCP configuration to `questlaw-mcp@0.5.2`, then
+  restart or reconnect your MCP client.
+- **Uploaded Claude plugin:** replace the installed copy with the new plugin ZIP.
+- **Claude Desktop extension:** install the new MCPB through the extension installer.
+- Your stored account key and library export normally do not need changes.
+- Confirm that `read_library_text` is available. It follows the server-supplied
+  `readText`, `readMore`, `readMatch`, and `nextCall` objects.
+
 ## Which file do I download?
 
 | If you use                                     | Download                                                |
@@ -30,5 +48,5 @@ After you install it, confirm that the four vendored modules that decrypt your
 library are intact:
 
 ```sh
-npx questlaw-mcp verify
+npx -y questlaw-mcp@0.5.2 verify
 ```

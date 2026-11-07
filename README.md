@@ -1,6 +1,7 @@
 # QuestLaw Library MCP
 
 [![CI](https://github.com/questlaw/questlaw-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/questlaw/questlaw-mcp/actions/workflows/ci.yml)
+[![npm version](https://badge.fury.io/js/questlaw-mcp.svg)](https://badge.fury.io/js/questlaw-mcp)
 [![License: GPL-3.0-or-later](https://img.shields.io/badge/license-GPL--3.0--or--later-blue.svg)](LICENSE)
 [![Node](https://img.shields.io/badge/node-%3E%3D20-brightgreen.svg)](package.json)
 [![Dependencies](https://img.shields.io/badge/dependencies-0-brightgreen.svg)](package.json)
@@ -53,7 +54,7 @@ QuestLaw extension          your machine                         AI client
 ## Quick start
 
 ```sh
-npx -y questlaw-mcp@0.5.1 setup
+npx -y questlaw-mcp@0.5.2 setup
 ```
 
 `setup` shows the disclosure and asks you to accept it, stores your account key in
@@ -61,7 +62,7 @@ the OS secret store, finds your newest export, test-decrypts it, and prints the
 configuration for your client. To check an install later:
 
 ```sh
-npx -y questlaw-mcp@0.5.1 doctor
+npx -y questlaw-mcp@0.5.2 doctor
 ```
 
 From a clone, run the same commands as `node bin/questlaw-library-mcp.js setup` and
@@ -104,7 +105,7 @@ needs that key to open an export. Get it from the extension, under **Settings,
 Encrypted library, Show account key**, and then store it:
 
 ```sh
-npx -y questlaw-mcp@0.5.1 setup
+npx -y questlaw-mcp@0.5.2 setup
 ```
 
 #### Where the key is kept
@@ -160,13 +161,13 @@ Either way, store your key first with `setup`.
 #### Claude Code without the plugin
 
 ```sh
-claude mcp add questlaw-library -- npx -y questlaw-mcp@0.5.1
+claude mcp add questlaw-library -- npx -y questlaw-mcp@0.5.2
 ```
 
 #### Codex
 
 ```sh
-codex mcp add questlaw-library -- npx -y questlaw-mcp@0.5.1
+codex mcp add questlaw-library -- npx -y questlaw-mcp@0.5.2
 ```
 
 Or add it to `~/.codex/config.toml` directly:
@@ -174,7 +175,7 @@ Or add it to `~/.codex/config.toml` directly:
 ```toml
 [mcp_servers.questlaw-library]
 command = "npx"
-args = ["-y", "questlaw-mcp@0.5.1"]
+args = ["-y", "questlaw-mcp@0.5.2"]
 
 [mcp_servers.questlaw-library.env]
 QUESTLAW_VAULT_FILE = "/absolute/path/to/export_folder"
@@ -241,7 +242,7 @@ pgrep -fl "tunnel-client|questlaw-library-mcp"
   "mcpServers": {
     "questlaw-library": {
       "command": "npx",
-      "args": ["-y", "questlaw-mcp@0.5.1"]
+      "args": ["-y", "questlaw-mcp@0.5.2"]
     }
   }
 }
@@ -254,7 +255,7 @@ Add an `env` block only to change a default:
   "mcpServers": {
     "questlaw-library": {
       "command": "npx",
-      "args": ["-y", "questlaw-mcp@0.5.1"],
+      "args": ["-y", "questlaw-mcp@0.5.2"],
       "env": {
         "QUESTLAW_VAULT_FILE": "/absolute/path/to/export_folder"
       }
@@ -281,7 +282,7 @@ The `setup` command prints the exact configuration for your machine.
 #### Checking an install
 
 ```sh
-npx -y questlaw-mcp@0.5.1 doctor
+npx -y questlaw-mcp@0.5.2 doctor
 ```
 
 ```
@@ -304,10 +305,11 @@ npx -y questlaw-mcp@0.5.1 doctor
 | `list_cases`             | `project`, `court`, `tag`, `sort`, `limit`, `offset`             | Every authority, or a filtered subset, in pages                             |
 | `search_library`         | `query`, `types`, `limit`, `offset`                              | One ranked search across everything                                         |
 | `search_cases`           | `query`, `project`, `court`, `tag`, `limit`, `offset`            | Saved authorities that match                                                |
-| `get_case`               | `guid*`                                                          | One authority in full, with notes, quotations, and related cases            |
+| `get_case`               | `guid*`                                                          | One authority with previews of notes, quotations, and related cases         |
 | `search_quotes`          | `query`, `limit`, `offset`                                       | Saved quotations that match                                                 |
 | `list_project_cases`     | `projectId*`, `sort`, `limit`, `offset`                          | Everything filed under one project                                          |
 | `get_source_text`        | `documentId*`, `outline`, `query`, `maxChars`, `offset`, `limit` | Captured text of a statute, regulation, rule, or opinion                    |
+| `read_library_text`      | `cursor*`, `maxChars`                                            | Exact stored text, including every clipped tail, in bounded pages           |
 | `find_citation_mentions` | `text*`, `limit`, `offset`                                       | Every place a draft cites an authority already in the library               |
 | `reload_snapshot`        | none                                                             | Read the newest export from disk again                                      |
 
@@ -317,9 +319,41 @@ An asterisk marks a required argument. The `types` argument accepts any of `case
 
 A typical session starts with `library_overview`, which describes the library. Then
 the model calls `search_library` to find something, and `get_case` or
-`get_source_text` to read it in full. To list the library instead of searching it,
+`get_source_text` to inspect it. Follow the returned `readText` call to read the
+exact stored text, or `matchedPassage.readMatch` to read around a search match.
+To list the library instead of searching it,
 the model can call `list_cases` with no arguments, and it pages through every
 authority, including the ones filed under no project.
+
+### Reading beyond a preview
+
+Source sections have an 8,000-character preview limit, notes and analysis 4,000,
+and quotations 1,500. These limits do not prevent reading the rest. The server
+returns exact calls shaped as `{ "tool": "read_library_text", "arguments": { ... } }`:
+
+- `readText` starts at the beginning of its document, section, authority, or item.
+- `readMore` continues immediately after a clipped preview. On case fields these
+  appear under `textTruncation`; quotations and relationship notes carry their own.
+- `matchedPassage.readMatch` opens text around a match, even deep inside a long
+  section. A joined passage can instead supply multiple `readMatches` calls.
+- `nextCall` continues the selected text target. It is present exactly when
+  `hasMore` is true. Read only as much as the task requires.
+
+The exact reader defaults to 4,000 UTF-16 code units per call and accepts
+`maxChars` from 2 to 65,536. Each fragment reports `start`, exclusive `end`, and
+`totalChars`; its text preserves stored whitespace and contains no added clipping
+markers. Pages do not split surrogate pairs. The serialized MCP result, including
+JSON escaping, is bounded by `QUESTLAW_MAX_RESPONSE_BYTES` (default 64 KiB).
+
+`nextOffset` pages rows or sections; its absence does **not** establish that their
+text was fully read. Cursors are opaque and valid only for the current server
+session and snapshot. On `stale_cursor`, repeat the original discovery call and
+use its new read call rather than combining text from different exports.
+
+A response limit never requires downloading text already captured in the export.
+Text that was never captured cannot be recovered by pagination. A complete read
+of the stored capture also does not establish that the original publication was
+captured completely.
 
 Search has a few limits that affect how you phrase a query:
 

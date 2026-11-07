@@ -148,17 +148,6 @@ function sourceSummary(document, sectionCount) {
   };
 }
 
-/** One captured section. `chars` is its length as captured, not of the text returned, so a caller reading an excerpt can see how much was left out. */
-function sectionView(section, maxChars = LIMITS.sectionChars) {
-  const text = String(section.text || '');
-  return {
-    label: section.label || '',
-    heading: section.heading || '',
-    chars: text.length,
-    text: clip(text, Math.max(1, Math.min(maxChars, LIMITS.sectionChars)))
-  };
-}
-
 /** A section's structure only, without its text. */
 function sectionOutline(section, index) {
   return {
@@ -170,6 +159,6 @@ function sectionOutline(section, index) {
 }
 
 module.exports = {
-  caseSummary, caseDetail, quoteHit, sourceSummary, sectionView, sectionOutline,
+  caseSummary, caseDetail, quoteHit, sourceSummary, sectionOutline,
   relatedAuthority, pincite, firstSentences
 };

@@ -8,6 +8,8 @@
  */
 'use strict';
 
+const { LibraryError } = require('./errors');
+
 const KiB = 1024;
 
 function clampEnv(name, fallback, min, max) {
@@ -26,14 +28,14 @@ const LIMITS = Object.freeze({
   notesChars: 4000,
   quoteChars: 1500,
   sectionChars: 8000,
+  textPageChars: 4000,
+  maxTextPageChars: 65536,
   /** The one-line gist carried on every case row, so a list is readable on its own. */
   summaryChars: 320,
   detailQuotes: 40,
   overviewTags: 50,
   overviewCourts: 25,
   mentionContextChars: 120,
-  /** Past this much captured text in one answer, say that an excerpt was available. */
-  longDocumentChars: 20000,
   /** Draft text accepted by find_citation_mentions. */
   inputTextBytes: 256 * KiB,
   /**
@@ -45,7 +47,43 @@ const LIMITS = Object.freeze({
 });
 
 /** Room reserved for the truncation sentence, which is written after capping. */
-const TRUNCATION_NOTE_BYTES = 200;
+const TRUNCATION_NOTE_BYTES = 512;
+
+/** The actual MCP result, including escaping the JSON carried inside its text block. */
+function toolResult(value, isError = false) {
+  return { content: [{ type: 'text', text: JSON.stringify(value) }], ...(isError ? { isError: true } : {}) };
+}
+
+const resultBytes = value => Buffer.byteLength(JSON.stringify(toolResult(value)));
+// Marginal bytes of a value inside the JSON-in-JSON text block.
+const encodedBytes = value => Buffer.byteLength(JSON.stringify(JSON.stringify(value))) - 2;
+
+function tooLarge() {
+  return new LibraryError('response_too_large', 'This result cannot fit the response byte budget.', {
+    hint: 'Use a smaller limit or maxChars, or follow readText/readMore with read_library_text.'
+  });
+}
+
+/** Do not cut between the two code units of a Unicode surrogate pair. */
+function safeEnd(text, end) {
+  if (end > 0 && end < text.length && /[\uD800-\uDBFF]/.test(text[end - 1])
+      && /[\uDC00-\uDFFF]/.test(text[end])) return end - 1;
+  return end;
+}
+
+/** Largest candidate that fits; builders must grow monotonically with the count. */
+function fittingChars(maximum, build, budget = LIMITS.responseBytes) {
+  // Finishing a target can remove continuation metadata, making the last candidate smaller.
+  if (resultBytes(build(maximum)) <= budget) return maximum;
+  let low = 0;
+  let high = maximum;
+  while (low < high) {
+    const middle = Math.ceil((low + high) / 2);
+    if (resultBytes(build(middle)) <= budget) low = middle;
+    else high = middle - 1;
+  }
+  return low;
+}
 
 /**
  * What's left for rows once the surrounding fields are paid for. An echoed query
@@ -53,30 +91,49 @@ const TRUNCATION_NOTE_BYTES = 200;
  * is what makes responseBytes a real ceiling.
  */
 function rowBudget(envelope) {
-  return LIMITS.responseBytes - Buffer.byteLength(JSON.stringify(envelope)) - TRUNCATION_NOTE_BYTES;
+  return LIMITS.responseBytes - resultBytes(envelope) - TRUNCATION_NOTE_BYTES;
 }
 
 /** Clips to `maxChars` and says how much was cut. */
 function clip(value, maxChars) {
   const text = String(value == null ? '' : value);
   if (text.length <= maxChars) return text;
-  return `${text.slice(0, maxChars)}... [clipped, ${text.length - maxChars} more characters]`;
+  const end = safeEnd(text, maxChars);
+  return `${text.slice(0, end)}... [clipped, ${text.length - end} more characters]`;
 }
 
 /**
- * Takes rows until the serialized budget is spent. It always returns at least one
- * row, since fields are already clipped and a single row is bounded.
+ * Takes rows until the serialized budget is spent. An oversized first row is an
+ * explicit failure, never an exception to the budget or a non-progressing page.
  */
 function capRows(rows, byteLimit = LIMITS.responseBytes) {
   const kept = [];
   let bytes = 2;
   for (const row of rows) {
-    const size = Buffer.byteLength(JSON.stringify(row)) + 1;
-    if (kept.length && bytes + size > byteLimit) break;
+    const size = encodedBytes(row) + 1;
+    if (bytes + size > byteLimit) {
+      if (!kept.length) throw tooLarge();
+      break;
+    }
     kept.push(row);
     bytes += size;
   }
   return kept;
+}
+
+/** Search rows are previews with independent readText links. Shorten their text
+ * before admitting a pathological escaped quotation as the first row. */
+function fitListRow(row, budget) {
+  if (encodedBytes(row) + 3 <= budget) return row;
+  const shorten = value => {
+    if (Array.isArray(value)) return value.map(shorten);
+    if (!value || typeof value !== 'object') return value;
+    return Object.fromEntries(Object.entries(value).map(([key, item]) => [key,
+      key === 'text' || key === 'summary' ? clip(item, 240) : shorten(item)]));
+  };
+  const reduced = { ...shorten(row), previewTruncated: true };
+  if (encodedBytes(reduced) + 3 > budget) throw tooLarge();
+  return reduced;
 }
 
 /**
@@ -88,7 +145,8 @@ function capRows(rows, byteLimit = LIMITS.responseBytes) {
  * short page looked the same as silently lost results.
  */
 function listResult(rows, matched, extra = {}) {
-  const kept = capRows(rows, rowBudget({ matched, returned: matched, results: [], ...extra }));
+  const budget = rowBudget({ matched, returned: matched, results: [], ...extra });
+  const kept = capRows(rows.map(row => fitListRow(row, budget)), budget);
   const result = { matched, returned: kept.length, results: kept, ...extra };
   const paged = Number.isInteger(extra.offset);
   const seen = (paged ? extra.offset : 0) + kept.length;
@@ -115,4 +173,7 @@ function listResult(rows, matched, extra = {}) {
   return result;
 }
 
-module.exports = { LIMITS, clip, capRows, rowBudget, listResult };
+module.exports = {
+  LIMITS, clip, capRows, rowBudget, listResult, toolResult, resultBytes,
+  encodedBytes, safeEnd, fittingChars, tooLarge
+};

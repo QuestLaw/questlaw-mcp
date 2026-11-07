@@ -209,3 +209,28 @@ test('the disclosure names what actually becomes readable', () => {
   // filters out. If that sentence goes missing, the disclosure understates what is shared.
   assert.match(DISCLOSURE, /carries more than/i);
 });
+
+test('a previously issued text cursor cannot bypass revoked consent', async () => {
+  const fixture = await ensureFixture();
+  const dir = scratchConfig();
+  const script = `
+    const fs = require('fs');
+    const { record } = require('./cli/consent');
+    const { consentFile } = require('./src/consent');
+    const store = require('./src/snapshot').createSnapshotStore(
+      { target: process.env.F, recoveryCode: process.env.K, freshnessIntervalMs: 0 });
+    const tools = new Map(require('./src/tools').createTools(store).map(t => [t.name, t]));
+    (async () => {
+      record(); await store.load();
+      const link = (await tools.get('get_case').run({ guid: 'case-verbose' })).readText;
+      await tools.get(link.tool).run(link.arguments);
+      fs.unlinkSync(consentFile());
+      const code = await tools.get(link.tool).run(link.arguments).then(() => 'served', e => e.code);
+      process.stdout.write(JSON.stringify({ code, state: store.status().state }));
+    })();`;
+  try {
+    assert.deepEqual(JSON.parse(evaluate(script, {
+      QUESTLAW_CONFIG_DIR: dir, F: fixture.file, K: fixture.recoveryCode
+    })), { code: 'disclosure_not_accepted', state: 'unavailable' });
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
